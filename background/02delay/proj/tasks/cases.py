@@ -1,0 +1,122 @@
+"""
+    + 24-01-17 各类 作业案例 case 集合
+"""
+
+from abc import ABC, abstractmethod, abstractproperty
+import pathlib
+from typing import Optional, List, Dict, Any, Tuple
+import arrow
+import pandas as pd
+from apscheduler.schedulers.background import BackgroundScheduler
+from loguru import logger
+
+from common.enums import ElementTypeEnum
+from conf._privacy import FTP_LIST
+from core.files import IFile, IStationFile
+from core.operaters import IOperater
+
+from mid_models.stations import StationElementMidModel
+from util.factory import factory_get_station_file, factory_get_operater
+from util.ftp import FtpClient
+from util.decorators import decorator_timer_consuming, decorator_exception_logging
+
+
+class ICase(ABC):
+
+    def __init__(self):
+        self.ftp_client: FtpClient = self.__init_ftp_client()
+
+    def __init_ftp_client(self) -> FtpClient:
+        """
+            初始化 ftp client
+        :return:
+        """
+        ftp_opt = FTP_LIST.get('STATION_REALDATA')
+        host = ftp_opt.get('HOST')
+        port = ftp_opt.get('PORT')
+        user_name: str = ftp_opt.get('USER')
+        pwd: str = ftp_opt.get('PWD')
+        ftp_client = FtpClient(host, port)
+        ftp_client.login(user_name, pwd)
+        return ftp_client
+
+    @abstractmethod
+    def todo(self, **kwargs):
+        pass
+
+
+class StationRealdataDownloadCase(ICase):
+    @decorator_exception_logging
+    def todo(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return:
+        """
+        # step1: 根据当前的触发时间，以及海洋站集合获取对应的站点集合|每个站点对应的要素
+        """
+            {'code':[要素a,要素b],,,}
+        """
+        list_station: List[StationElementMidModel] = [
+            StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])]
+        ftp = self.ftp_client
+        ts = kwargs.get('ts')
+        local_root_path: str = kwargs.get('local_root_path')
+        remote_root_path: str = kwargs.get('remote_root_path')
+
+        # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
+        for val_station in list_station:
+            logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{ts}')
+            for val_element in val_station.elements:
+                logger.info(
+                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{ts}|要素:{val_element.value}')
+                # step2-1:根据工厂方法获取当前要素对应的文件
+                cls = factory_get_station_file(val_element)
+                """ 文件类"""
+                file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code, ts,
+                                                  remote_root_path)
+                """ 文件类实例化对象"""
+                # step2-2:文件下载
+                # step2-3:文件读取
+                # step2-4:文件写入db
+                # 以上均在操作类中实现
+                cls_operate = factory_get_operater(val_element)
+                """操作类"""
+                instance_operate: IOperater = cls_operate(file_instance)
+                """ 操作类实例化对象"""
+                instance_operate.todo(ts=ts)
+            pass
+        pass
+
+
+def timer_download_station_realdata():
+    """
+        站点下载定时器
+    :return:
+    """
+    now_ts: int = arrow.Arrow.utcnow().int_timestamp
+    local_root_path: str = ''
+    remote_root_path: str = ''
+
+    """当前时间的时间戳"""
+    logger.info(f"触发timer_download_station_realdata|ts:{now_ts}")
+
+    case = StationRealdataDownloadCase()
+    case.todo(ts=now_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
+
+
+def delay_task():
+    """
+        执行定时延时作业:
+            定时下载站点数据
+    :return:
+    """
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动定时任务触发事件:')
+    # 十分钟/次 的定时下载站点任务
+    scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
+    # # 启动调度任务
+    scheduler.start()
