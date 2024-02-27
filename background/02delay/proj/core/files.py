@@ -77,9 +77,9 @@ class IFile(ABC):
         if pathlib.Path(self.local_full_path).parent.exists():
             pass
         else:
-            pathlib.Path(self.local_full_path).parent.mkdir()
+            pathlib.Path(self.local_full_path).parent.mkdir(parents=True, exist_ok=True)
             # step2: 将ftp远端文件 在相对路径下 下载至本地 local_full_path 中
-        is_ok = self.ftp_client.down_load_file_bycwd(self.local_full_path, self.get_relative_path(),
+        is_ok = self.ftp_client.down_load_file_bycwd(self.local_full_path, self.get_remote_path(),
                                                      self.get_file_name())
         return is_ok
 
@@ -103,32 +103,48 @@ class IStationFile(IFile):
     """
 
     def __init__(self, ftp_client: FtpClient, local_root_path: str, element_type: ElementTypeEnum, station_code: str,
+                 station_name: str,
                  station_num: str,
                  ts: int,
                  remote_root_path: str = None):
         super().__init__(ftp_client, local_root_path, element_type, remote_root_path)
         self.station_code: str = station_code
         """站代码 XQS"""
+        self.station_name: str = station_name
+        """站名称(ch)"""
         self.station_num: str = station_num
         """站代号 08442"""
         self.ts = ts
         """当前时间戳 Int"""
 
     def get_remote_path(self) -> str:
+        """
+            相对于 self.remote_root_path 的相对路径
+            remote_path:              '/test/ObsData/SHW/2024/02/20'
+            实际路径: /home/nmefc/share/test/ObsData/汕尾/perclock/2024/02
+        @return: '/test/ObsData/SHW/2024/02/20'
+        """
         relative_path: str = get_store_relative_path(self.ts)
         """存储的相对路径(yyyy/mm/dd)"""
-        path = pathlib.Path(self.remote_root_path) / self.station_code / relative_path
+        path = pathlib.Path(self.remote_root_path) / self.station_name / 'perclock' / relative_path
         return str(path)
 
     def get_local_path(self) -> str:
         relative_path: str = get_store_relative_path(self.ts)
         """存储的相对路径(yyyy/mm/dd)"""
-        path = pathlib.Path(self.local_root_path) / self.station_code / relative_path
+        path = pathlib.Path(self.local_root_path) / self.station_name / relative_path
         return str(path)
 
     def get_relative_path(self) -> str:
+        """
+            相对于 self.remote_root_path 的相对路径
+            remote_path:              '/test/ObsData/SHW/2024/02/20'
+            实际路径: /home/nmefc/share/test/ObsData/汕尾/perclock/2024/02
+        @return: eg: /test/ObsData/SHW/2024/02/20
+        """
         relative_path: str = get_store_relative_path(self.ts)
-        path = pathlib.Path(self.station_code) / relative_path
+        # TODO:[-] 24-02-26 注意实际的路径(包含:perclock)
+        path = pathlib.Path(self.station_name) / 'perclock' / relative_path
         return str(path)
 
     @abstractmethod
@@ -153,7 +169,7 @@ class SurgeFile(IStationFile):
                 :return:
                 """
         mmdd = get_calendarday_filestamp(self.ts)
-        file_name: str = f'WL{mmdd}_DAT.{self.station_code}'
+        file_name: str = f'WL{mmdd}_DAT.{self.station_num}'
         """WL0115_DAT.08442"""
         return file_name
 

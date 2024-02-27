@@ -2,7 +2,7 @@ import pathlib
 from loguru import logger
 import arrow
 from conf.settings import LOG_DIR, LOG_FILE
-from tasks.cases import delay_task
+from tasks.cases import delay_task, timer_download_station_realdata
 
 
 def init_logging():
@@ -26,9 +26,10 @@ def init_logging():
 
 def main():
     """入口方法"""
-    logger.info(f'启动观测检测系统:{arrow.Arrow.utcnow().format("yyyy-mm-dd HH:MM")}')
+    logger.info(f'启动观测检测系统:{arrow.Arrow.utcnow().format("YYYY-MM-dd HH:MM")}')
     # 执行定时延时作业
-    delay_task()
+    # delay_task()
+    timer_download_station_realdata()
 
 
 if __name__ == '__main__':

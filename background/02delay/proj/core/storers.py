@@ -68,31 +68,36 @@ class SurgeStore(IStore):
         station_code = self.file.station_code
         for val in realdata_list:
             temp_ts = val['ts']
+            temp_dt: datetime = arrow.get(temp_ts).datetime
+
             # TODO:[*] 24-01-16 此处应加入是否为默认值 9999 的判断
             temp_surge = val['surge']
             stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == station_code,
-                                                        SurgePerclockDataModel.ts == ts)
+                                                        SurgePerclockDataModel.issue_ts == temp_ts)
             filter_res = self.session.execute(stmt).fetchall()
             # 当前时间
-            temp_dt: datetime = arrow.Arrow.utcnow().datetime
+            utc_now: datetime = arrow.Arrow.utcnow().datetime
             # 若已经存在则直接更新
             if len(filter_res) > 0:
                 update_stmt = (update(SurgePerclockDataModel).where(
                     SurgePerclockDataModel.station_code == station_code,
-                    SurgePerclockDataModel.ts == temp_ts).values(
+                    SurgePerclockDataModel.issue_ts == temp_ts).values(
                     surge=temp_surge,
                     station_code=station_code,
-                    ts=temp_ts,
-                    gmt_modify_time=temp_dt
+                    issue_ts=temp_ts,
+                    gmt_modify_time=utc_now
                 ))
                 self.session.execute(update_stmt)
             # 若不存在则insert
             else:
                 temp_model = SurgePerclockDataModel(surge=temp_surge,
                                                     station_code=station_code,
-                                                    ts=temp_ts,
-                                                    gmt_modify_time=temp_dt, gmt_create_time=temp_dt)
+                                                    issue_ts=temp_ts,
+                                                    issue_dt=temp_dt,
+                                                    gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 self.session.add(temp_model)
+        self.session.commit()
+        self.session.close()
         pass
 
     def _loop_extremum_2_db(self, extremum_list: List[dict], ts: int):

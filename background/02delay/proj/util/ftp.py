@@ -10,7 +10,10 @@ class FtpClient:
     """
         + 23-09-20 ftp下载工厂类
     """
-    encoding = 'gbk'
+
+    # encoding = 'gbk'
+    # TODO:[-] 24-02-26 由于目录存在中文设置为 utf-8
+    encoding = 'utf-8'
     ftp = ftplib.FTP()
 
     def __init__(self, host: str, port=21):
@@ -37,11 +40,25 @@ class FtpClient:
         return True
 
     def down_load_file_bycwd(self, local_full_path: str, remote_path: str, file_name: str) -> bool:
+        """
+            - 24-02-27 此处需要修改 remote_path 为远端的绝对路径，由于下载不同的文件需要反复切换至不同的目录，使用相对路径较为不便
+            改为使用绝对路径
+        @param local_full_path:
+        @param remote_path:
+        @param file_name:
+        @return:
+        """
         is_ok: bool = False
         file_handler = open(local_full_path, 'wb')
         # print(file_handler)
         # self.ftp.retrbinary("RETR %s" % (RemoteFile), file_handler.write)#接收服务器上文件并写入本地文件
         # 进入到 remote_path 路径下
+        # ftplib.error_perm: 550 Failed to change directory.
+        # remote_path:              '/test/ObsData/SHW/2024/02/20'
+        # 实际路径: /home/nmefc/share/test/ObsData/汕尾/perclock/2024/02
+        # v2:                     '/test/ObsData/汕尾/perclock/2024/02/20'
+        # v3:     '/home/nmefc/share/test/ObsData/汕尾/perclock/2024/02/20'
+        # -- 修改为实际的绝对路径
         self.ftp.cwd(remote_path)
         files_list: List[str] = self.ftp.nlst()
         # TODO:[-] 23-09-26 修改 ftp 缓冲区为 250KB
@@ -54,6 +71,16 @@ class FtpClient:
             is_ok = True
             load_over_time: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
             print(f'{load_over_time}[-]下载指定文件:{file_name}成功')
+            file_handler.close()
+        # TODO:[*] 24-02-27 此处缺少对于小写的处理
+        elif file_name.lower() in files_list:
+            now_str: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
+            print(f'')
+            print(f'{now_str}[*]下载指定文件:{file_name}ing')
+            self.ftp.retrbinary('RETR ' + file_name.lower(), file_handler.write, BUFSIZE)
+            is_ok = True
+            load_over_time: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
+            print(f'{load_over_time}[-]下载指定文件:{file_name.lower()}成功')
             file_handler.close()
         return is_ok
 

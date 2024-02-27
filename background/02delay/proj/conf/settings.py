@@ -4,11 +4,14 @@ db_pwd = DB.get('DB_PWD')
 # 数据库的配置，配置借鉴自 django 的 settings 的结构
 DATABASES = {
     'default': {
-        'ENGINE': 'mysqldb',  # 数据库引擎
-        'NAME': 'wd_forecast_db',  # 数据库名
+        # mac 尝试使用
+        'ENGINE': 'pymysql',  # 数据库引擎
+        # 'ENGINE': 'mysqldb',  # 数据库引擎
+        'NAME': 'sys_station_montior',  # 数据库名
         'USER': 'root',  # 账号
         'PASSWORD': db_pwd,
-        'HOST': 'localhost',  # HOST
+        # 'HOST': 'localhost',  # HOST
+        'HOST': '128.5.9.79',  # HOST
         # 'HOST': '172.17.0.1',  # 9.79 docker 内部访问 mysql 地址
         # 'HOST': 'host.docker.internal',  # docker 宿主机
         'POST': 3306,  # 端口

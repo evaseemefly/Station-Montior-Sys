@@ -32,6 +32,8 @@ class WindOperate(IOperater):
 class SurgeOperate(IOperater):
     """
         潮位操作类 完成 文件下载 -> 读取 -> 写入数据库的操作
+        ERROR: [*] 24-02-26
+        coroutine 'SurgeOperate.todo' was never awaited instance_operate.todo(ts=ts)
     """
 
     @decorator_timer_consuming

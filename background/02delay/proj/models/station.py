@@ -17,6 +17,9 @@ class IStationSurge(IModel, IIdIntModel):
 class SurgePerclockDataModel(IStationSurge, ITimestampModel):
     table_name_base = 'surge_perclock_data_'
 
+    # error:sqlalchemy.exc.InvalidRequestError: Class <class 'models.station.SurgePerclockDataModel'> does not have a __table__ or __tablename__ specified and does not inherit from an existing table-mapped class.
+    __tablename__ = 'surge_perclock_data_template'
+
     surge: Mapped[float] = mapped_column(default=DEFAULT_SURGE)
 
     @classmethod

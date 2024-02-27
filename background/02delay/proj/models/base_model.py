@@ -45,4 +45,5 @@ class IModel(BaseMeta):
 
 class ITimestampModel(BaseMeta):
     __abstract__ = True
-    ts: Mapped[int]
+    issue_ts: Mapped[int]
+    issue_dt: Mapped[datetime]

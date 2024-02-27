@@ -10,7 +10,7 @@ def get_utc_year(ts: int) -> str:
     """
 
     current_arrow: arrow.Arrow = arrow.get(ts)
-    year_str: str = current_arrow.format('yyyy')
+    year_str: str = current_arrow.format('YYYY')
     return year_str
 
 
@@ -21,8 +21,53 @@ def get_utc_month(ts: int) -> str:
     :return:
     """
     current_arrow: arrow.Arrow = arrow.get(ts)
-    month_str: str = current_arrow.format('mm')
+    month_str: str = current_arrow.format('MM')
     return month_str
+
+
+def get_localtime_year(ts: int) -> str:
+    """
+            本日 00->23 H
+            对应utc时间 前一日:16H -> 本日:15H
+    """
+    format_str: str = 'YYYY'
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    if dt_arrow.datetime.hour >= 16:
+        yyyy = dt_arrow.format(format_str)
+    else:
+        # 0-15
+        yyyy = dt_arrow.shift(days=-1).format(format_str)
+    return yyyy
+
+
+def get_localtime_month(ts: int) -> str:
+    """
+            本日 00->23 H
+            对应utc时间 前一日:16H -> 本日:15H
+    """
+    format_str: str = 'MM'
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    if dt_arrow.datetime.hour >= 16:
+        mm = dt_arrow.format(format_str)
+    else:
+        # 0-15
+        mm = dt_arrow.shift(days=-1).format(format_str)
+    return mm
+
+
+def get_localtime_day(ts: int) -> str:
+    """
+            本日 00->23 H
+            对应utc时间 前一日:16H -> 本日:15H
+    """
+    format_str: str = 'DD'
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    if dt_arrow.datetime.hour >= 16:
+        dd = dt_arrow.format(format_str)
+    else:
+        # 0-15
+        dd = dt_arrow.shift(days=-1).format(format_str)
+    return dd
 
 
 def get_utc_day(ts: int) -> str:
@@ -32,7 +77,7 @@ def get_utc_day(ts: int) -> str:
     :return:
     """
     current_arrow: arrow.Arrow = arrow.get(ts)
-    day_str: str = current_arrow.format('dd')
+    day_str: str = current_arrow.format('DD')
     return day_str
 
 
@@ -42,9 +87,10 @@ def get_store_relative_path(ts: int) -> str:
     :param ts:
     :return:
     """
-    year: str = get_utc_year(ts)
-    month: str = get_utc_month(ts)
-    day: str = get_utc_day(ts)
+    # TODO:[*] 24-02-26 注意此处修改为根据本地时间获取存储路径
+    year: str = get_localtime_year(ts)
+    month: str = get_localtime_month(ts)
+    day: str = get_localtime_day(ts)
     path = pathlib.Path(year) / month / day
     return str(path)
 
@@ -83,7 +129,7 @@ def get_calendarday_filestamp(ts: int) -> str:
     mmdd: str = ''
     dt_arrow: arrow.Arrow = arrow.get(ts)
     """mmdd 字符串戳"""
-    format_str: str = 'mmdd'
+    format_str: str = 'MMDD'
     # 传入的时间对应的 dt
     dt_arrow: arrow.Arrow = arrow.get(ts)
     """

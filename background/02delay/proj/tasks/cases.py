@@ -46,7 +46,7 @@ class ICase(ABC):
 
 
 class StationRealdataDownloadCase(ICase):
-    @decorator_exception_logging
+    # @decorator_exception_logging
     def todo(self, **kwargs):
         """
 
@@ -57,7 +57,14 @@ class StationRealdataDownloadCase(ICase):
         """
             {'code':[要素a,要素b],,,}
         """
+        # TODO:[*] 24-02-27 注意例如站点不存在某个要素的整点数据，例如潮位数据WL 莆田不存在，则会报错
         list_station: List[StationElementMidModel] = [
+            # StationElementMidModel('SHW', '08522', '莆田', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]), # 存在大小写的问题
+            StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])]
         ftp = self.ftp_client
@@ -74,7 +81,9 @@ class StationRealdataDownloadCase(ICase):
                 # step2-1:根据工厂方法获取当前要素对应的文件
                 cls = factory_get_station_file(val_element)
                 """ 文件类"""
-                file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code, ts,
+                file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code,
+                                                  val_station.station_name,
+                                                  val_station.station_num, ts,
                                                   remote_root_path)
                 """ 文件类实例化对象"""
                 # step2-2:文件下载
@@ -95,9 +104,15 @@ def timer_download_station_realdata():
         站点下载定时器
     :return:
     """
-    now_ts: int = arrow.Arrow.utcnow().int_timestamp
-    local_root_path: str = ''
-    remote_root_path: str = ''
+    target_dt = arrow.Arrow(2024, 2, 21, 0, 0)
+    now_ts: int = target_dt.int_timestamp
+    local_root_path: str = '/Users/evaseemefly/03data/02station'
+    # TODO:[-] 24-02-26 此处修改为remote的全路径
+    # remote_root_path: str = r'/home/nmefc/share/test/ObsData/'
+    # v2:不使用全路径，需改为 相对路径 /home/nmefc/share/test/ObsData/' -> test/ObsData/
+    # remote_root_path: str = r'test/ObsData/'
+    # v3: 修改为使用远端绝对路径
+    remote_root_path: str = r'/home/nmefc/share/test/ObsData/数据'
 
     """当前时间的时间戳"""
     logger.info(f"触发timer_download_station_realdata|ts:{now_ts}")

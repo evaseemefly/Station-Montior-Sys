@@ -110,9 +110,9 @@ class SurgeReader(IReader):
         :return:
         """
         res_dict = self.read_file(self.file.local_full_path)
-        list_realdata_surge: List[dict] = res_dict['extremum']
+        list_realdata_surge: List[dict] = res_dict['realdata']
         """站点实况集合(整点潮位值)"""
-        list_extremum_surge: List[dict] = res_dict['realdata']
+        list_extremum_surge: List[dict] = res_dict['extremum']
         """站点每日极值集合"""
         return list_realdata_surge, list_extremum_surge
 
@@ -122,7 +122,7 @@ class SurgeReader(IReader):
         :param full_path:
         :return:{’extremum‘:list[dict],'realdata':list[dcit]}
         """
-        res_dict: Optional[dict] = None
+        res_dict: Optional[dict] = {}
         list_surge: List[dict] = []
         """实况潮位集合 {ts:int,surge:float}"""
         list_surge_extremum: List[dict] = []
@@ -147,16 +147,16 @@ class SurgeReader(IReader):
                         # eg: 20231217
                         #     yyyy-mm-dd
                         dt_str: str = str(int(data.iloc[0][0]))
-                        date_local = arrow.Arrow(dt_str, 'yyyymmdd')
+                        date_local = arrow.get(dt_str, 'YYYYMMDD')
                         # 设置起始时间(utc)
                         # xxxx 12:00(utc)
-                        dt_start_utc: arrow.Arrow = arrow.Arrow(dt_str, 'yyyymmdd').shift(hours=-8)
+                        dt_start_utc: arrow.Arrow = arrow.get(dt_str, 'YYYYMMDD').shift(hours=-8)
                         # 站点起始时间为昨天的20点(local)
                         series_surge: pd.Series = data.iloc[0][1:25]
                         for index in range(24):
                             # print(index)
                             # TODO:[*] 24-01-15 此处需要加入是否为缺省值的判断
-                            temp_dt_arrow: arrow.Arrow = dt_start_utc.shift(hours=1)
+                            temp_dt_arrow: arrow.Arrow = dt_start_utc.shift(hours=index)
                             temp_ts: int = temp_dt_arrow.int_timestamp
                             temp_surge = series_surge[index + 1]
                             temp_dict = {'ts': temp_ts, 'surge': temp_surge}
@@ -169,10 +169,10 @@ class SurgeReader(IReader):
 
                         """ 当日潮位极值对应series 的长度 """
                         """
-                           0 608
-                           1 148
-                           2 115
-                           3 906
+                           0 608    值
+                           1 148    时间
+                           2 115    值
+                           3 906    时间
                            4 619
                            5 1517
                            6 248
@@ -180,18 +180,24 @@ class SurgeReader(IReader):
                            8 9999
                            9 9999
                         """
+                        """
+                        
+                        """
                         for index, val in enumerate(series_extremum):
-                            temp_str: str = val
+                            temp_str: str = str(val)
                             # 能被2整除(包含0)说明为时间位
                             # 缺省值会是 9999
+                            # 0,2,4,6
                             if index % 2 == 0 and val != 9999:
-                                temp_time_str: str = temp_str
+                                # 注意时间在对应数值的后面
+                                temp_time_str: str = str(series_extremum.iloc[index + 1])
                                 # '608'.rjust(4,'0')
                                 # '0608'
-                                temp_dt_format: str = f'{date_local.format("yyyymmdd")}{temp_time_str.rjust(4, "0")}'
+                                temp_dt_format: str = f'{date_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
                                 # 转换为utc
-                                temp_dt: arrow.Arrow = arrow.Arrow(temp_dt_format).shift(hours=-8)
+                                temp_dt: arrow.Arrow = arrow.get(temp_dt_format, "YYYYMMDDhhmm").shift(hours=-8)
                                 temp_ts: int = temp_dt.int_timestamp
+                                """对应的极值的时间戳"""
                                 temp_dict: dict = {'ts': temp_ts, 'surge': val}
                                 list_surge_extremum.append(temp_dict)
                         res_dict['extremum'] = list_surge_extremum
