@@ -60,13 +60,14 @@ class StationRealdataDownloadCase(ICase):
         # TODO:[*] 24-02-27 注意例如站点不存在某个要素的整点数据，例如潮位数据WL 莆田不存在，则会报错
         list_station: List[StationElementMidModel] = [
             # StationElementMidModel('SHW', '08522', '莆田', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]), # 存在大小写的问题
-            StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])]
+            StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # 存在大小写的问题
+            # StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
+        ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
         local_root_path: str = kwargs.get('local_root_path')
