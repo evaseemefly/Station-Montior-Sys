@@ -16,7 +16,7 @@ from util.ftp import FtpClient
 from util.common import get_store_relative_path
 from common.enums import ElementTypeEnum
 
-from models.station import SurgePerclockDataModel
+from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
 from core.readers import SurgeReader
 from db.db import DbFactory
 
@@ -106,4 +106,38 @@ class SurgeStore(IStore):
         :param extremum_list: {'ts','surge'}[]
         :return:
         """
+        station_code = self.file.station_code
+        for val in extremum_list:
+            temp_ts = val['ts']
+            temp_dt: datetime = arrow.get(temp_ts).datetime
+
+            # TODO:[*] 24-01-16 此处应加入是否为默认值 9999 的判断
+            temp_surge = val['surge']
+            stmt = select(SurgePerclockExtremumDataModel).where(
+                SurgePerclockExtremumDataModel.station_code == station_code,
+                SurgePerclockExtremumDataModel.issue_ts == temp_ts)
+            filter_res = self.session.execute(stmt).fetchall()
+            # 当前时间
+            utc_now: datetime = arrow.Arrow.utcnow().datetime
+            # 若已经存在则直接更新
+            if len(filter_res) > 0:
+                update_stmt = (update(SurgePerclockExtremumDataModel).where(
+                    SurgePerclockExtremumDataModel.station_code == station_code,
+                    SurgePerclockExtremumDataModel.issue_ts == temp_ts).values(
+                    surge=temp_surge,
+                    station_code=station_code,
+                    issue_ts=temp_ts,
+                    gmt_modify_time=utc_now
+                ))
+                self.session.execute(update_stmt)
+            # 若不存在则insert
+            else:
+                temp_model = SurgePerclockExtremumDataModel(surge=temp_surge,
+                                                            station_code=station_code,
+                                                            issue_ts=temp_ts,
+                                                            issue_dt=temp_dt,
+                                                            gmt_modify_time=utc_now, gmt_create_time=utc_now)
+                self.session.add(temp_model)
+        self.session.commit()
+        self.session.close()
         pass

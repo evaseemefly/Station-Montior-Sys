@@ -150,9 +150,11 @@ class SurgeReader(IReader):
                         #     yyyy-mm-dd
                         dt_str: str = str(int(data.iloc[0][0]))
                         date_local = arrow.get(dt_str, 'YYYYMMDD')
+                        hh_utc_str: str = '12'
+                        dt_utc_str: str = f'{dt_str}{hh_utc_str}'
                         # 设置起始时间(utc)
                         # xxxx 12:00(utc)
-                        dt_start_utc: arrow.Arrow = arrow.get(dt_str, 'YYYYMMDD').shift(hours=-8)
+                        dt_start_utc: arrow.Arrow = arrow.get(dt_utc_str, 'YYYYMMDDHH').shift(days=-1)
                         # 站点起始时间为昨天的20点(local)
                         series_surge: pd.Series = data.iloc[0][1:25]
                         """获取当日实况情况(series)"""
@@ -294,12 +296,16 @@ class SurgeReader(IReader):
     def _read_extremum(self, dt: arrow.Arrow, series_list: pd.Series) -> List[dict]:
         """
             读取极值 series
+            TODO:[*] 24-02-29 读取极值会将时间往前推一天
         @param dt: 起始的世界时
         @param series_list:
         @return:
         """
         list_dict: List[dict] = []
         dt_start_utc: arrow.Arrow = dt
+        """文件起始时间utc"""
+        dt_start_local: arrow.Arrow = dt_start_utc.shift(hours=8)
+        """文件起始时间localtime"""
         # 获取当日极值情况
         series_extremum: pd.Series = series_list
         """ 当日的潮位极值 series """
@@ -332,10 +338,19 @@ class SurgeReader(IReader):
                     temp_time_str: str = str(series_extremum.iloc[index + 1])
                     # '608'.rjust(4,'0')
                     # '0608'
-                    temp_dt_format: str = f'{dt_start_utc.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+                    # TODO:[*] 24-02-29 注意此处有一个隐藏的问题:由于整点报文为 20H -> 次日19H(localtime),此处需要将 utc -> localtime
+                    temp_dt_format: str = ''
+                    """当前极值对应的时间字符串 YYYYMMDDHH"""
+
+                    # TODO:[*] 24-02-29 localtime: [20H,23H][2000,2359] 直接拼接即可; localtime:[ 0000,1959] day+1 再拼接
+                    if int(temp_time_str) >= 2000 and int(temp_time_str) <= 2359:
+                        temp_dt_format: str = f'{dt_start_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+                    elif int(temp_time_str) >= 0 and int(temp_time_str) <= 1959:
+                        temp_dt_format: str = f'{dt_start_local.shift(days=1).format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+
                     # 转换为utc
-                    temp_dt: arrow.Arrow = arrow.get(temp_dt_format, "YYYYMMDDhhmm").shift(hours=-8)
-                    temp_ts: int = temp_dt.int_timestamp
+                    temp_dt_utc: arrow.Arrow = arrow.get(temp_dt_format, "YYYYMMDDhhmm").shift(hours=-8)
+                    temp_ts: int = temp_dt_utc.int_timestamp
                     """对应的极值的时间戳"""
                     temp_dict: dict = {'ts': temp_ts, 'surge': val}
                     list_dict.append(temp_dict)

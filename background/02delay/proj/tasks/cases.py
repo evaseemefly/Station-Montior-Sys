@@ -16,6 +16,7 @@ from core.files import IFile, IStationFile
 from core.operaters import IOperater
 
 from mid_models.stations import StationElementMidModel
+from util.common import get_station_start_ts
 from util.factory import factory_get_station_file, factory_get_operater
 from util.ftp import FtpClient
 from util.decorators import decorator_timer_consuming, decorator_exception_logging
@@ -61,30 +62,32 @@ class StationRealdataDownloadCase(ICase):
         list_station: List[StationElementMidModel] = [
             # StationElementMidModel('SHW', '08522', '莆田', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # 存在大小写的问题
-            # StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
+            StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
         ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
+        # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)
+        stand_start_ts: int = get_station_start_ts(ts)
         local_root_path: str = kwargs.get('local_root_path')
         remote_root_path: str = kwargs.get('remote_root_path')
 
         # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
         for val_station in list_station:
-            logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{ts}')
+            logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
             for val_element in val_station.elements:
                 logger.info(
-                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{ts}|要素:{val_element.value}')
+                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}')
                 # step2-1:根据工厂方法获取当前要素对应的文件
                 cls = factory_get_station_file(val_element)
                 """ 文件类"""
                 file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code,
                                                   val_station.station_name,
-                                                  val_station.station_num, ts,
+                                                  val_station.station_num, stand_start_ts,
                                                   remote_root_path)
                 """ 文件类实例化对象"""
                 # step2-2:文件下载
@@ -95,7 +98,7 @@ class StationRealdataDownloadCase(ICase):
                 """操作类"""
                 instance_operate: IOperater = cls_operate(file_instance)
                 """ 操作类实例化对象"""
-                instance_operate.todo(ts=ts)
+                instance_operate.todo(ts=stand_start_ts)
             pass
         pass
 
@@ -105,7 +108,7 @@ def timer_download_station_realdata():
         站点下载定时器
     :return:
     """
-    target_dt = arrow.Arrow(2024, 2, 21, 0, 0)
+    target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
     now_ts: int = target_dt.int_timestamp
     local_root_path: str = '/Users/evaseemefly/03data/02station'
     # TODO:[-] 24-02-26 此处修改为remote的全路径
