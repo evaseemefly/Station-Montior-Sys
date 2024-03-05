@@ -18,7 +18,7 @@ class DBConfig:
     port = '3306'
     username = 'root'
     password = db_pwd
-    database = 'surge_global_sys'
+    database = 'sys_station_montior'
     charset = 'utf8mb4'
     table_name_prefix = ''
     echo = False

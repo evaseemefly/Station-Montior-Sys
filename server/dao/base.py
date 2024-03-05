@@ -1,4 +1,4 @@
-from db.db_factory import DBFactory
+from db.db import DBFactory
 
 
 class BaseDao:

@@ -46,8 +46,34 @@ class StationSurgeDao(BaseDao):
             # 未传入结束时间，按照start_ts+24h赋值
             end_ts = start_ts + 24 * 60 * 60
         stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == station_code,
-                                                    SurgePerclockDataModel.issue_ts > start_ts,
-                                                    SurgePerclockDataModel.issue_ts < end_ts).order_by(
+                                                    SurgePerclockDataModel.issue_ts >= start_ts,
+                                                    SurgePerclockDataModel.issue_ts <= end_ts).order_by(
             SurgePerclockDataModel.issue_ts)
-        res = session.execute(stmt).fetchall()
+        res = session.execute(stmt).scalars().all()
+        return res
+
+
+class StationSurgeExtremeDao(BaseDao):
+    def get_station_extreme_list(self, station_code: str, start_ts: int, end_ts: int) -> List[
+        SurgePerclockExtremumDataModel]:
+        list_extreme: List[SurgePerclockExtremumDataModel] = self.get_extreme_byparams(station_code=station_code,
+                                                                                       start_ts=start_ts, end_ts=end_ts)
+        return list_extreme
+
+    def get_extreme_byparams(self, **kwargs):
+        session: Session = self.db.session
+        station_code: str = kwargs.get('station_code')
+        """站点code"""
+        start_ts: int = kwargs.get('start_ts')
+        """起始ts"""
+        end_ts: int = kwargs.get('end_ts')
+        """结束ts(可空)"""
+        if end_ts is None:
+            # 未传入结束时间，按照start_ts+24h赋值
+            end_ts = start_ts + 24 * 60 * 60
+        stmt = select(SurgePerclockExtremumDataModel).where(SurgePerclockExtremumDataModel.station_code == station_code,
+                                                            SurgePerclockExtremumDataModel.issue_ts >= start_ts,
+                                                            SurgePerclockExtremumDataModel.issue_ts <= end_ts).order_by(
+            SurgePerclockExtremumDataModel.issue_ts)
+        res = session.execute(stmt).scalars().all()
         return res
