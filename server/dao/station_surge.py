@@ -16,11 +16,11 @@ class StationSurgeDao(BaseDao):
     def get_station_realdata_list(self, station_code: str, start_ts: int, end_ts: int) -> List[
         SurgeRealDataSchema]:
         """
-            根据传入的海洋站 code 以及 起止时间获取时间范围内的 surge data 集合
+            根据传入的单站 code 以及 起止时间获取时间范围内的 surge data 集合
             起止时间不需要超过1个月
         @param station_code:
-        @param gmt_start:
-        @param gmt_end:
+        @param start_ts:
+        @param end_ts:
         @return:
         """
         # TODO:[*] 23-03-12 此处存在一个问题:当 起止时间不在一月(已在spider模块修改)
@@ -32,11 +32,11 @@ class StationSurgeDao(BaseDao):
     def get_stations_realdata_list(self, station_codes: List[str], start_ts: int, end_ts: int) -> List[
         SurgeRealDataSchema]:
         """
-            根据传入的海洋站 code 以及 起止时间获取时间范围内的 surge data 集合
+            根据传入的多站 code 以及 起止时间获取时间范围内的 surge data 集合
             起止时间不需要超过1个月
-        @param station_code:
-        @param gmt_start:
-        @param gmt_end:
+        @param station_codes:
+        @param start_ts:
+        @param end_ts:
         @return:
         """
         # TODO:[*] 23-03-12 此处存在一个问题:当 起止时间不在一月(已在spider模块修改)
@@ -99,12 +99,26 @@ class StationSurgeDao(BaseDao):
 class StationSurgeExtremeDao(BaseDao):
     def get_station_extreme_list(self, station_code: str, start_ts: int, end_ts: int) -> List[
         SurgePerclockExtremumDataModel]:
+        """
+            获取单站的极值集合
+        :param station_code:
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
         list_extreme: List[SurgePerclockExtremumDataModel] = self.get_extreme_byparams(station_code=station_code,
                                                                                        start_ts=start_ts, end_ts=end_ts)
         return list_extreme
 
     def get_stations_extreme_list(self, station_codes: List[str], start_ts: int, end_ts: int) -> List[
         SurgePerclockExtremumDataModel]:
+        """
+            获取多站极值集合
+        :param station_codes:
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
         list_extreme: List[SurgePerclockExtremumDataModel] = self.get_stations_extreme_byparams(
             station_code=station_codes,
             start_ts=start_ts, end_ts=end_ts)
@@ -113,7 +127,7 @@ class StationSurgeExtremeDao(BaseDao):
     def get_stations_extreme_byparams(self, **kwargs):
         """
             获取站点集合对应时间内的极值集合
-        :param kwargs:
+        :param kwargs:station_code,start_ts,end_ts
         :return:
         """
         session: Session = self.db.session
@@ -138,6 +152,11 @@ class StationSurgeExtremeDao(BaseDao):
         return res
 
     def get_extreme_byparams(self, **kwargs):
+        """
+            根据参数直接查询 model 集合
+        :param kwargs:station_code,start_ts,end_ts
+        :return:
+        """
         session: Session = self.db.session
         station_code: str = kwargs.get('station_code')
         """站点code"""
@@ -156,6 +175,11 @@ class StationSurgeExtremeDao(BaseDao):
         return res
 
     def get_one_extreme_maximum(self, **kwargs):
+        """
+            获取单站极值model集合
+        :param kwargs:station_code,start_ts,end_ts
+        :return:
+        """
         session: Session = self.db.session
         station_code: str = kwargs.get('station_code')
         """站点code"""
@@ -179,6 +203,11 @@ class StationSurgeExtremeDao(BaseDao):
         return res
 
     def get_many_extreme_maximum(self, **kwargs):
+        """
+            获取多个站点的极值最大值(指定时间范围内)集合
+        :param kwargs: station_codes,start_ts,end_ts
+        :return:
+        """
         session: Session = self.db.session
         station_codes: str = kwargs.get('station_codes')
         """站点code"""
