@@ -1,8 +1,8 @@
 from typing import List, Optional, Any
 from datetime import datetime
 import arrow
-from sqlalchemy import select, update, func, and_, text
-from sqlalchemy.orm import Session
+from sqlalchemy import select, update, func, and_, text, TextClause
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import func
 
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
@@ -94,6 +94,91 @@ class StationSurgeDao(BaseDao):
             temp_res = session.execute(stmt).scalars().all()
             res.extend(temp_res)
         return res
+
+    def get_all_stations_realdata_max(self, start_ts: int, end_ts: int) -> List[
+        SurgeRealDataSchema]:
+        """
+            获取所有站点的 指定时间范围内的极值
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
+
+        """
+            查询sql
+            SELECT station_code, surge, issue_dt
+            FROM surge_perclock_data_realtime_template
+            WHERE issue_ts >= 1708344000
+              and issue_ts <= 1708426800
+              and surge in (
+                SELECT MAX(surge)
+                FROM surge_perclock_data_realtime_template
+                WHERE issue_ts >= 1708344000
+                  and issue_ts <= 1708426800
+                GROUP BY station_code
+            )
+        """
+        session: Session = self.db.session
+        res: List[SurgePerclockDataModel] = []
+        """站点code"""
+        if end_ts is None:
+            # 未传入结束时间，按照start_ts+24h赋值
+            end_ts = start_ts + 24 * 60 * 60
+        """
+            SELECT max(surge_perclock_data_realtime_template.surge) AS max_1, surge_perclock_data_realtime_template.station_code 
+            FROM surge_perclock_data_realtime_template 
+            WHERE surge_perclock_data_realtime_template.issue_ts >= :issue_ts_1 
+            AND surge_perclock_data_realtime_template.issue_ts <= :issue_ts_2 
+            GROUP BY surge_perclock_data_realtime_template.station_code
+        """
+        # 注意此处不能使用 select([xx,xx])
+        # stmt_sub = select(func.max(SurgePerclockDataModel.surge).label('max_surge'),
+        #                   SurgePerclockDataModel.station_code
+        #                   ).where(
+        #     SurgePerclockDataModel.issue_ts >= start_ts,
+        #     SurgePerclockDataModel.issue_ts <= end_ts).group_by(SurgePerclockDataModel.station_code)
+        # # SELECT max(surge_perclock_data_realtime_template.surge) AS max_surge, surge_perclock_data_realtime_template.station_code
+        # # FROM surge_perclock_data_realtime_template
+        # # WHERE surge_perclock_data_realtime_template.issue_ts >= :issue_ts_1 AND surge_perclock_data_realtime_template.issue_ts <= :issue_ts_2 GROUP BY surge_perclock_data_realtime_template.station_code
+        # sub_q = stmt_sub.subquery()
+        # # [526.0, 274.0, 537.0, 150.0, 183.0, 436.0, 263.0]
+        # aliased(SurgePerclockDataModel, sub_q, name='perclock_data')
+        # res_sub = session.execute(stmt_sub).scalars().all()
+        # # TODO:[-] 24-03-12 AttributeError: 'Subquery' object has no attribute 'station_code'
+        # stmt = select(SurgePerclockDataModel.surge, SurgePerclockDataModel.station_code,
+        #               SurgePerclockDataModel.issue_ts, SurgePerclockDataModel.issue_dt).where(
+        #     SurgePerclockDataModel.issue_ts >= start_ts,
+        #     SurgePerclockDataModel.issue_ts <= end_ts).join(sub_q,
+        #                                                     SurgePerclockDataModel.station_code == sub_q.station_code,
+        #                                                     sub_q.max_surge == SurgePerclockDataModel.surge)
+        # sub_q.station_code == SurgePerclockDataModel.station_code,
+        # sub_q.max_surge == SurgePerclockDataModel.surge)
+        # temp_res = session.execute(stmt).scalars().all()
+        # 方法2:建议对于复杂的子查询直接使用sql语句拼接的方式
+
+        # TODO:[-] 24-03-12 此处需要将 table name 修改为动态表名
+        sql_str: TextClause = text(f"""
+            SELECT MAIN.station_code, MAIN.surge, MAIN.issue_ts,MAIN.issue_dt
+            FROM surge_perclock_data_realtime_template AS MAIN
+            JOIN (
+                SELECT MAX(surge) as surge_max,surge_perclock_data_realtime_template.station_code
+                FROM surge_perclock_data_realtime_template
+                WHERE issue_ts >= {start_ts}
+                  and issue_ts <= {end_ts}
+                GROUP BY station_code
+            )AS SUB
+            ON SUB.station_code=MAIN.station_code AND SUB.surge_max=MAIN.surge
+            WHERE issue_ts >= {start_ts}
+              and issue_ts <= {end_ts}
+        """)
+
+        res = session.execute(sql_str)
+        res = res.fetchall()
+        res_schema: List[SurgeRealDataSchema] = []
+        for temp in res:
+            res_schema.append(
+                SurgeRealDataSchema(station_code=temp[0], surge=temp[1], issue_ts=temp[2], issue_dt=temp[3]))
+        return res_schema
 
 
 class StationSurgeExtremeDao(BaseDao):

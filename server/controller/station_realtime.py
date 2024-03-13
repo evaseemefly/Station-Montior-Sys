@@ -92,3 +92,12 @@ def get_one_station_extreme_bydt(station_code: str, dt: str):
     dao = StationSurgeExtremeDao()
     res = dao.get_station_extreme_list(station_code, start_ts, end_ts)
     return res
+
+
+@app.get('/all/dtrange/max/', response_model=List[SurgeRealDataSchema],
+         response_model_include=['station_code', 'issue_ts', 'surge', 'issue_dt'],
+         summary="获取指定时间范围内的所有站点的极值实况极值")
+def get_all_station_surgemax_byts(start_ts: int, end_ts: int):
+    dao = StationSurgeDao()
+    res = dao.get_all_stations_realdata_max(start_ts=start_ts, end_ts=end_ts)
+    return res
