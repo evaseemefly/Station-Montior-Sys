@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request,
 from dao.station_surge import StationSurgeDao, StationSurgeExtremeDao
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
 from schema.station_status import StationSurgeSchema
-from schema.station_surge import SurgeRealDataSchema, SurgeRealDataJoinStationSchema
+from schema.station_surge import SurgeRealDataSchema, SurgeRealDataJoinStationSchema, DistStationSurgeListSchema, \
+    DistStationRealdataListSchema
 
 app = APIRouter()
 
@@ -100,4 +101,13 @@ def get_one_station_extreme_bydt(station_code: str, dt: str):
 def get_all_station_surgemax_byts(start_ts: int, end_ts: int):
     dao = StationSurgeDao()
     res = dao.get_all_stations_realdata_max(start_ts=start_ts, end_ts=end_ts)
+    return res
+
+
+@app.get('/dist/dtrange/perclock/', response_model=List[DistStationRealdataListSchema],
+         response_model_include=['station_code', 'surge_list', 'ts_list'],
+         summary="获取指定时间范围内的所有站点的极值实况极值")
+def get_dits_station_surge_list(start_ts: int, end_ts: int):
+    dao = StationSurgeDao()
+    res = dao.get_all_stations_realdata_list(start_ts, end_ts)
     return res

@@ -129,3 +129,25 @@ class StationBaseDao(BaseDao):
         for temp in list_tide_dict:
             list_tide.append(DistStationTideListSchema.parse_obj(temp))
         return list_tide
+
+    def get_dist_station_astronomictide_list(self, start_ts: int, end_ts: int) -> List[DistStationTideListSchema]:
+        """
+            通过 consul 调用remote中的天文潮集合
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
+        start_arrow: arrow.Arrow = arrow.get(start_ts)
+        end_arrow: arrow.Arrow = arrow.get(end_ts)
+        start_dt_str: str = f"{start_arrow.format('YYYY-MM-DDTHH:mm:ss')}Z"
+        end_dt_str: str = f"{end_arrow.format('YYYY-MM-DDTHH:mm:ss')}Z"
+        # TODO:[*] 23-11-17 修改为通过服务发现调用接口
+        res_content: str = get_remote_service('/station/dist/astronomictide/list',
+                                              params={'start_dt': start_dt_str, 'end_dt': end_dt_str})
+        # {'station_code': 'CGM', 'forecast_dt': '2023-07-31T17:00:00Z', 'surge': 441.0}
+        # 天文潮字典集合
+        list_tide_dict: List[Dict] = json.loads(res_content)
+        list_tide: List[DistStationTideListSchema] = []
+        for temp in list_tide_dict:
+            list_tide.append(DistStationTideListSchema.parse_obj(temp))
+        return list_tide

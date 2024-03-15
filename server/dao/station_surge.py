@@ -5,6 +5,7 @@ from sqlalchemy import select, update, func, and_, text, TextClause
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import func
 
+from mid_models.stations import DistStationSurgeListMidModel
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
 from schema.region import RegionSchema
 from schema.station_surge import SurgeRealDataSchema
@@ -179,6 +180,44 @@ class StationSurgeDao(BaseDao):
             res_schema.append(
                 SurgeRealDataSchema(station_code=temp[0], surge=temp[1], issue_ts=temp[2], issue_dt=temp[3]))
         return res_schema
+
+    def get_all_stations_realdata_list(self, start_ts: int, end_ts: int) -> List[DistStationSurgeListMidModel]:
+        """
+            获取所有站点的时间范围内的实况集合
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
+        session = self.db.session
+        sql_str: text = text(f"""
+            SELECT station_code,
+                group_concat(issue_ts  order by issue_ts) as issue_ts_list,
+                group_concat(surge  order by issue_ts) as surge_list
+                FROM surge_perclock_data_realtime_template
+                WHERE surge_perclock_data_realtime_template.issue_ts >= {start_ts}
+                  AND surge_perclock_data_realtime_template.issue_ts <= {end_ts}
+                GROUP BY station_code
+        """)
+        res = session.execute(sql_str)
+        dist_station_surge_list: List[DistStationSurgeListMidModel] = []
+        for temp in res:
+            temp_code: str = temp.station_code
+            temp_surge_str_list: List[str] = temp.surge_list.split(',')
+            temp_surge_list: List[float] = []
+            for temp_surge_str in temp_surge_str_list:
+                if temp_surge_str != '' or temp_surge_str != ',':
+                    temp_surge_list.append(float(temp_surge_str))
+
+            temp_ts_str_list: List[str] = temp.issue_ts_list.split(',')
+            temp_ts_list: List[int] = []
+            for temp_ts_str in temp_ts_str_list:
+                if temp_ts_str != '':
+                    temp_ts_list.append(int(temp_ts_str))
+            temp_tide_middelmodel: DistStationSurgeListMidModel = DistStationSurgeListMidModel(code=temp_code,
+                                                                                               surge_list=temp_surge_list,
+                                                                                               ts_list=temp_ts_list)
+            dist_station_surge_list.append(temp_tide_middelmodel)
+        return dist_station_surge_list
 
 
 class StationSurgeExtremeDao(BaseDao):

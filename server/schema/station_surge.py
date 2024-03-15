@@ -70,6 +70,19 @@ class DistStationTideListSchema(BaseModel):
     tide_list: List[float]
 
 
+class DistStationRealdataListSchema(BaseModel):
+    """
+        对应 mid model DistStationSurgeListMidModel
+    """
+    station_code: str
+    surge_list: List[float]
+    ts_list: List[int]
+
+    class Config:
+        # 对于自定义model也需要设置此配置
+        orm_mode = True
+
+
 class DistStationSurgeListSchema(BaseModel):
     station_code: str
     issue_ts: int

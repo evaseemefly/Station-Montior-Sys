@@ -17,3 +17,15 @@ class StationElementMidModel:
         """站点 中文名"""
         self.elements = elements
         """该站点的要素种类集合"""
+
+
+class DistStationSurgeListMidModel:
+    """
+        + 24-03-15 不同站点潮位集合
+        对应 DistStationSurgeListSchema
+    """
+
+    def __init__(self, code: str, surge_list: List[float], ts_list: List[int]):
+        self.station_code = code
+        self.surge_list = surge_list
+        self.ts_list = ts_list

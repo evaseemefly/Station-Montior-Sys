@@ -16,6 +16,22 @@ class StationSchema(BaseModel):
     class Config:
         orm_mode = True
 
+class StationBaseInfoSchema(BaseModel):
+    id: int
+    name: str
+    code: str
+    lat: float
+    lon: float
+    is_abs: bool
+    pid: int
+    base_level_diff: int
+    d85: float = None
+    is_in_use: bool
+    sort: int
+    is_in_common_use: bool
+
+    class Config:
+        orm_mode = True
 
 class StationRegionSchema(BaseModel):
     id: int
