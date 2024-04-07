@@ -78,3 +78,7 @@ class SurgePerclockExtremumDataModel(IStationSurge, ITimestampModel):
         """
         tab_name: str = cls.get_split_tab_name(dt_arrow)
         cls.__table__.name = tab_name
+
+    @classmethod
+    def get_tab_name(cls):
+        return cls.__tablename__

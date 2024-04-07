@@ -5,7 +5,7 @@ db_pwd = DB.get('DB_PWD')
 DATABASES = {
     'default': {
         # mac 尝试使用
-        'ENGINE': 'pymysql',  # 数据库引擎
+        'ENGINE': 'mysqldb',  # 数据库引擎
         # 'ENGINE': 'mysqldb',  # 数据库引擎
         'NAME': 'sys_station_montior',  # 数据库名
         'USER': 'root',  # 账号

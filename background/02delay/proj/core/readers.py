@@ -150,10 +150,12 @@ class SurgeReader(IReader):
                         #     yyyy-mm-dd
                         dt_str: str = str(int(data.iloc[0][0]))
                         date_local = arrow.get(dt_str, 'YYYYMMDD')
-                        hh_utc_str: str = '12'
+                        # TODO:[*] 24-04-03 整点潮位数据起始时间为 Localtime 00时，此处需要修改
+                        hh_utc_str: str = '16'
                         dt_utc_str: str = f'{dt_str}{hh_utc_str}'
                         # 设置起始时间(utc)
                         # xxxx 12:00(utc)
+                        # 读取时间有误，应为 24-8=16
                         dt_start_utc: arrow.Arrow = arrow.get(dt_utc_str, 'YYYYMMDDHH').shift(days=-1)
                         # 站点起始时间为昨天的20点(local)
                         series_surge: pd.Series = data.iloc[0][1:25]

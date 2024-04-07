@@ -81,6 +81,15 @@ def get_many_station_maximum_byts(start_ts: int, end_ts: int, station_codes: Lis
     return res
 
 
+@app.get('/dist/dtrange/extreme/maximum', response_model=List[SurgeRealDataSchema],
+         response_model_include=['station_code', 'issue_ts', 'surge', 'issue_dt'],
+         summary="获取指定时间范围内的指定站点的极值")
+def get_dist_station_maximum_byts(start_ts: int, end_ts: int, station_codes: List[str] = Query(None), ):
+    dao = StationSurgeExtremeDao()
+    res = dao.get_dist_extreme_maximum(start_ts=start_ts, end_ts=end_ts)
+    return res
+
+
 @app.get('/one/targetdt/extreme', response_model=List[StationSurgeSchema],
          response_model_include=['station_code', 'issue_ts', 'surge', 'issue_dt'],
          summary="获取指定站点指定日期(dt)的极值集合")
@@ -107,7 +116,7 @@ def get_all_station_surgemax_byts(start_ts: int, end_ts: int):
 @app.get('/dist/dtrange/perclock/', response_model=List[DistStationRealdataListSchema],
          response_model_include=['station_code', 'surge_list', 'ts_list'],
          summary="获取指定时间范围内的所有站点的极值实况极值")
-def get_dits_station_surge_list(start_ts: int, end_ts: int):
+def get_dist_station_surge_list(start_ts: int, end_ts: int):
     dao = StationSurgeDao()
     res = dao.get_all_stations_realdata_list(start_ts, end_ts)
     return res

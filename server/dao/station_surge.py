@@ -157,7 +157,6 @@ class StationSurgeDao(BaseDao):
         # temp_res = session.execute(stmt).scalars().all()
         # 方法2:建议对于复杂的子查询直接使用sql语句拼接的方式
 
-        # TODO:[-] 24-03-12 此处需要将 table name 修改为动态表名
         sql_str: TextClause = text(f"""
             SELECT MAIN.station_code, MAIN.surge, MAIN.issue_ts,MAIN.issue_dt
             FROM surge_perclock_data_realtime_template AS MAIN
@@ -356,3 +355,53 @@ class StationSurgeExtremeDao(BaseDao):
             temp_res = session.execute(stmt).scalars().all()
             res.extend(temp_res)
         return res
+
+    def get_dist_extreme_maximum(self, start_ts: int, end_ts: int) -> List[SurgeRealDataSchema]:
+        """
+            + 24-03-19 获取所有站点的每日高高潮/低高潮集合
+        :param start_ts:
+        :param end_ts:
+        :return:
+        """
+        session = self.db.session
+
+        """
+        step1: sql 查询
+            SELECT MAIN.station_code, MAIN.surge, MAIN.issue_dt,MAIN.issue_dt
+            FROM surge_perclock_data_extremum_template AS MAIN
+            JOIN (
+                SELECT MAX(surge) as surge_max,surge_perclock_data_extremum_template.station_code
+                FROM surge_perclock_data_extremum_template
+                WHERE issue_ts >= 1708344000
+                  and issue_ts <= 1708426800
+                GROUP BY station_code
+            )AS SUB
+            ON SUB.station_code=MAIN.station_code AND SUB.surge_max=MAIN.surge
+            WHERE issue_ts >= 1708344000
+              and issue_ts <= 1708426800
+        step2: 提取所有 station_code
+        step3: 封装至 -> station_code:xx                        
+        """
+        # TODO:[-] 24-03-12 此处需要将 table name 修改为动态表名
+        tab_name: str = SurgePerclockExtremumDataModel.get_tab_name()
+        """表名"""
+        sql_str: text = text(f"""
+            SELECT MAIN.station_code, MAIN.surge, MAIN.issue_ts as ts,MAIN.issue_dt as dt
+            FROM {tab_name} AS MAIN
+            JOIN (
+                SELECT MAX(surge) as surge_max,{tab_name}.station_code
+                FROM {tab_name}
+                WHERE issue_ts >= {start_ts}
+                  and issue_ts <= {end_ts}
+                GROUP BY station_code
+            )AS SUB
+            ON SUB.station_code=MAIN.station_code AND SUB.surge_max=MAIN.surge
+            WHERE issue_ts >= {start_ts}
+              and issue_ts <= {end_ts}
+        """)
+        res = session.execute(sql_str)
+        res_schema: List[SurgeRealDataSchema] = []
+        for temp in res:
+            res_schema.append(
+                SurgeRealDataSchema(station_code=temp[0], surge=temp[1], issue_ts=temp[2], issue_dt=temp[3]))
+        return res_schema

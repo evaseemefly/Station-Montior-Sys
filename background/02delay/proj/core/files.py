@@ -127,6 +127,8 @@ class IStationFile(IFile):
         relative_path: str = get_store_relative_path(self.ts)
         """存储的相对路径(yyyy/mm/dd)"""
         path = pathlib.Path(self.remote_root_path) / self.station_name / 'perclock' / relative_path
+        # TODO:[-] 24-03-27 此处若运行在win下需要手动将其转换为 linux 路径格式
+        path = path.as_posix()
         return str(path)
 
     def get_local_path(self) -> str:

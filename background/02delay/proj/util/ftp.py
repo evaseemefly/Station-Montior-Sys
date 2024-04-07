@@ -19,6 +19,8 @@ class FtpClient:
     def __init__(self, host: str, port=21):
         self.ftp.connect(host, port)
         self.ftp.encoding = self.encoding
+        # TODO:[*] 24-03-27 此处修改
+        # self.ftp = ftplib.FTP(host=host, encoding=self.encoding)
 
     def login(self, user, passwd):
         self.ftp.login(user, passwd)
@@ -59,6 +61,12 @@ class FtpClient:
         # v2:                     '/test/ObsData/汕尾/perclock/2024/02/20'
         # v3:     '/home/nmefc/share/test/ObsData/汕尾/perclock/2024/02/20'
         # -- 修改为实际的绝对路径
+        # TODO:[*] 24-03-27
+        # 路径错误
+        # ftplib.error_perm: 550 The system cannot find the path specified.
+        # 改为 linux 系统路径格式后仍然出错
+        # ftplib.error_temp: 451 No mapping for the Unicode character exists in the target multi-byte code page.
+        # remote_path = r'/home/nmefc/share/test/ObsData'
         self.ftp.cwd(remote_path)
         files_list: List[str] = self.ftp.nlst()
         # TODO:[-] 23-09-26 修改 ftp 缓冲区为 250KB

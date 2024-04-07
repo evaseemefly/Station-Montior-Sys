@@ -61,13 +61,23 @@ class StationRealdataDownloadCase(ICase):
         # TODO:[*] 24-02-27 注意例如站点不存在某个要素的整点数据，例如潮位数据WL 莆田不存在，则会报错
         list_station: List[StationElementMidModel] = [
             # StationElementMidModel('SHW', '08522', '莆田', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # 存在大小写的问题
-            StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
+            # StationElementMidModel('YAO', '09710', '南澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # 存在大小写的问题
+            # StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('QLN', '11742', '清澜', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('SPU', '07421', '石浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
+            StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('HZO', '09740', '北隍城', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
         ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
@@ -108,9 +118,12 @@ def timer_download_station_realdata():
         站点下载定时器
     :return:
     """
-    target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
+    target_dt = arrow.Arrow(2024, 2, 28, 0, 0)
     now_ts: int = target_dt.int_timestamp
-    local_root_path: str = '/Users/evaseemefly/03data/02station'
+    # local_root_path: str = '/Users/evaseemefly/03data/02station'
+    # TODO:[-] 24-03-27 采用 docker 容器内绝对路径为 /data/remote
+    # local_root_path: str = r'/data/remote'
+    local_root_path: str = r'D:\05data\05station_data'
     # TODO:[-] 24-02-26 此处修改为remote的全路径
     # remote_root_path: str = r'/home/nmefc/share/test/ObsData/'
     # v2:不使用全路径，需改为 相对路径 /home/nmefc/share/test/ObsData/' -> test/ObsData/
