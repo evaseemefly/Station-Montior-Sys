@@ -185,7 +185,7 @@ class WindFile(IStationFile):
                 :param ts:
                 :return:
                 """
-        mmdd = get_filestamp(self.ts)
-        file_name: str = f'WS{mmdd}_DAT.{self.station_code}'
+        mmdd = get_calendarday_filestamp(self.ts)
+        file_name: str = f'WS{mmdd}_DAT.{self.station_num}'
         """WS0115_DAT.08442"""
         return file_name

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from conf.db_config import DBConfig
 
@@ -9,10 +9,13 @@ class DBFactory:
     """
     session: Session = None
     default_config: DBConfig = DBConfig()
+    engine: Engine = None
+    config: DBConfig = None
 
     def __init__(self, config: DBConfig = None):
         if not config:
             config = self.default_config
+            self.config = config
         self.session = self._create_scoped_session(config)
 
     def __del__(self):
@@ -23,6 +26,21 @@ class DBFactory:
         :return:
         """
         self.session.close()
+
+    def get_engine(self):
+        """
+            + 24-04-07 获取 engine 实例
+        :param config:
+        :return:
+        """
+        config = self.config
+        return create_engine(
+            config.get_url(),
+            pool_size=config.pool_size,
+            max_overflow=config.max_overflow,
+            pool_recycle=config.pool_recycle,
+            echo=config.echo
+        )
 
     @staticmethod
     def _create_scoped_session(config: DBConfig):

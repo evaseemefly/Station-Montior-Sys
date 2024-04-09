@@ -14,3 +14,15 @@ class ElementTypeEnum(Enum):
     """潮位(潮位)"""
     AT = 503
     """气温"""
+
+
+@unique
+class ExtremumType(Enum):
+    """
+        极值美剧
+    """
+    WIND_EXTREMUM = 801
+    """风速极值"""
+
+    WIND_MAX = 802
+    """风速最大值"""

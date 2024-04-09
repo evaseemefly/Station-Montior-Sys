@@ -49,3 +49,21 @@ class DbFactory:
         if self._session_def is None:
             self._session_def = scoped_session(sessionmaker(bind=self.engine))
         return self._session_def()
+
+
+def check_exist_tab(tab_name: str) -> bool:
+    """
+        判断指定表是否存在
+    @param tab_name:
+    @return:
+    """
+    is_exist = False
+    auto_base = automap_base()
+    db_factory = DbFactory()
+    session = db_factory.Session
+    engine = db_factory.engine
+    auto_base.prepare(engine, reflect=True)
+    list_tabs = auto_base.classes
+    if tab_name in list_tabs:
+        is_exist = True
+    return is_exist

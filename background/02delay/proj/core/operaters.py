@@ -10,8 +10,9 @@ import pandas as pd
 
 from common.exceptions import FtpDownLoadError
 from core.files import IFile, IStationFile
-from core.readers import SurgeReader
-from core.storers import SurgeStore
+from core.readers import SurgeReader, WindReader
+from core.storers import SurgeStore, PerclockWindStore
+from mid_models.elements import WindExtremum
 from util.decorators import decorator_timer_consuming
 
 
@@ -25,8 +26,19 @@ class IOperater(ABC):
 
 
 class WindOperate(IOperater):
+    @decorator_timer_consuming
     def todo(self, **kwargs):
-        pass
+        ts = kwargs.get('ts')
+        # step1: 下载文件
+        if self.file.download():
+            wind_reader = WindReader(self.file)
+            realdata_list: List[dict] = wind_reader.list_wind
+            max: WindExtremum = wind_reader.max
+            extremum: WindExtremum = wind_reader.extremum
+            PerclockWindStore(self.file).to_db(realdata_list=realdata_list, max=max, extremum=extremum, ts=ts)
+            pass
+        else:
+            raise FtpDownLoadError()
 
 
 class SurgeOperate(IOperater):

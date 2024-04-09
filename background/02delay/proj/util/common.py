@@ -1,6 +1,8 @@
 import arrow
 import pathlib
 
+from common.enums import ElementTypeEnum
+
 
 def get_utc_year(ts: int) -> str:
     """
@@ -124,7 +126,7 @@ def get_filestamp(ts: int) -> str:
     mmdd: str = ''
     dt_arrow: arrow.Arrow = arrow.get(ts)
     """mmdd 字符串戳"""
-    format_str: str = 'mmdd'
+    format_str: str = 'MMDD'
     # 传入的时间对应的 dt
     dt_arrow: arrow.Arrow = arrow.get(ts)
     """
@@ -136,6 +138,24 @@ def get_filestamp(ts: int) -> str:
     else:
         mmdd = dt_arrow.shift(days=-1).format(format_str)
     return mmdd
+
+
+def get_standard_datestamp(ts: int, element_type: ElementTypeEnum = ElementTypeEnum.SURGE):
+    """
+        + 24-04-09
+        潮位要素整点数据的起止时间为本地时:00,风要素起始时间为前一日:21
+        根据标准化后的时间戳获取对应的日期戳(标准化)
+    @param ts:
+    @param element_type:
+    @return:
+    """
+    format_str: str = 'YYYYMMDD'
+    # 传入的时间对应的 dt
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    date_str: str = ''
+    if element_type in [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]:
+        date_str = dt_arrow.shift(days=1).format(format_str)
+    return date_str
 
 
 def get_calendarday_filestamp(ts: int) -> str:

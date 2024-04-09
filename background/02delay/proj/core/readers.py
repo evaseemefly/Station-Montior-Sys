@@ -10,6 +10,7 @@ import pandas as pd
 
 from common.exceptions import FileReadError, FileFormatError
 from core.files import IFile
+from mid_models.elements import WindExtremum
 from util.ftp import FtpClient
 from util.common import get_store_relative_path
 from common.enums import ElementTypeEnum
@@ -39,56 +40,129 @@ class WindReader(IReader):
         风 读取器
     """
 
-    def get_wind_data_list(self):
+    def __init__(self, file: IFile):
+
+        super().__init__(file)
+        self.list_wind: List[dict] = []
+        """风要素实况集合 :List[{'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}]"""
+        self.extremum: WindExtremum = None
+        """风要素极值"""
+        self.max: WindExtremum = None
+        """风要素最大值"""
+        self.assign_wind_data_list()
+        pass
+
+    def assign_wind_data_list(self):
         """
             获取风要素的数据集合
+            并为当前reader中的变量赋值
         :return:
         """
-        list_wind: List[dict] = self.read_file(self.file.local_full_path)
-        return list_wind
+        list_wind, extremum_dict = self.read_file(self.file.local_full_path)
+        self.list_wind = list_wind
+        self.extremum = extremum_dict['extremum']
+        self.max = extremum_dict['max']
 
     # 读取整点数据(风场为例)
-    def read_file(self, full_path: str) -> List[dict]:
+    def read_file(self, full_path: str) -> Tuple[List[dict], dict]:
         """
             读取指定路径的风要素文件
             [*] 24-01-15 需要加入异常处理
         :param full_path: 读取文件全路径
-        :return:
+        :return: list_wind: list[{'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}]
+                 extremum_val_dict: 'extremum':WindExtremum , 'max':WindExtremum
         """
         list_wind: List[dict] = []
+        extremum_val_dict: dict = {}
+        omit_list: List[float, int] = [999, 9998, 9999]
         # step-1: 判断指定文件是否存在
         if pathlib.Path(full_path).exists():
             # step-2: 以 gbk 格式打开指定文件
-            with open(full_path, 'rb') as f:
-                data = pd.read_csv(f, encoding='gbk', sep='\s+', header=None,
-                                   infer_datetime_format=False)
-                # step-3:获取文件的shape
-                shape = data.shape
-                # 总行数
-                rows = data.shape[0]
-                # 总列数
-                columns = data.shape[1]
-                if rows > 0:
-                    # 日期
-                    # eg: 20231217
-                    #     yyyy-mm-dd
-                    dt_str: str = str(int(data.iloc[0][0]))
-                    # 设置起始时间(utc)
-                    # xxxx 12:00(utc)
-                    dt_start_utc: arrow.Arrow = arrow.Arrow(dt_str, 'yyyymmdd').add(hour=-12)
-                    # 站点起始时间为昨天的20点(local)
-                    realdata_series: pd.Series = data.iloc[0][1:]
+            try:
+                with open(full_path, 'rb') as f:
+                    data = pd.read_csv(f, encoding='gbk', sep='\s+', header=None,
+                                       infer_datetime_format=False)
+                    # step-3:获取文件的shape
+                    shape = data.shape
+                    # 总行数
+                    rows = data.shape[0]
+                    # 总列数
+                    columns = data.shape[1]
+                    if rows > 0:
+                        # 日期
+                        # eg: 2023 12 17
+                        #     yyyy-mm-dd
+                        dt_str: str = str(int(data.iloc[0][0]))
 
-                    step = 2
-                    for index in range(24):
-                        # print(index)
-                        temp_dt_arrow: arrow.Arrow = dt_start_utc.add(hour=1)
-                        temp_ts: int = temp_dt_arrow.int_timestamp
-                        temp_wd = realdata_series[index * step + 1]
-                        temp_ws = realdata_series[index * step + 2]
-                        temp_dict = {'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}
-                        list_wind.append(temp_dict)
-        return list_wind
+                        """风向极值字典 extremum-极值;max-最大值"""
+                        # 设置起始时间(utc)
+                        # xxxx 12:00(utc)
+                        # 风要素起始时间为前一日21点
+                        # local:21-8=utc:13
+                        dt_start_utc: arrow.Arrow = arrow.get(dt_str, 'YYYYMMDD').shift(hours=-11)
+                        # 站点起始时间为昨天的20点(local)
+                        realdata_series: pd.Series = data.iloc[0][1:]
+
+                        step = 2
+                        for index in range(24):
+                            # print(index)
+                            temp_dt_arrow: arrow.Arrow = dt_start_utc.shift(hours=index)
+                            temp_ts: int = temp_dt_arrow.int_timestamp
+                            temp_wd = realdata_series[index * step + 1]
+                            temp_ws = realdata_series[index * step + 2]
+                            if temp_ws in omit_list or temp_wd in omit_list:
+                                pass
+                            else:
+                                temp_dict = {'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}
+                                list_wind.append(temp_dict)
+                        if rows > 3:
+                            extremum_row = data.iloc[3]
+                            """极值出现的行"""
+                            extremum_val: float = extremum_row.iloc[0]
+                            """极值"""
+                            extremum_dir: float = extremum_row.iloc[1]
+                            """极值对应的风向"""
+                            extremum_hhdd: float = extremum_row.iloc[2]
+                            extremum_hhdd_str: str = str(int(extremum_hhdd)).rjust(4, '0')
+                            if extremum_val in omit_list or extremum_dir in omit_list:
+                                pass
+                            else:
+                                extremum_dt_str = f'{dt_str}{extremum_hhdd_str}'
+                                """极值对应的出现时间"""
+                                extremum_dt_utc: arrow.Arrow = arrow.get(extremum_dt_str, 'YYYYMMDDhhmm').shift(
+                                    hours=-8)
+                                extremum_ts: int = extremum_dt_utc.int_timestamp
+
+                                extremum_val_dict['extremum'] = WindExtremum(extremum_val, extremum_dir, extremum_ts)
+                            # -----------------
+                            max_row = data.iloc[2]
+                            """最大值出现的行"""
+                            max_val: float = max_row.iloc[0]
+                            """最大值"""
+                            max_dir: float = max_row.iloc[1]
+                            """最大值对应的风向"""
+
+                            max_hhdd: float = max_row.iloc[2]
+                            """最大之出现时间"""
+                            # TODO:[*] 24-04-09 由于 使用 serise.iloc[index] 读取后的某列数值为 float，需要转换为 str
+                            # 例如原始数据为: 0747 -> 747.0 -> 0747 需要向左侧填充4位0
+                            max_hhdd_str: str = str(int(max_hhdd)).rjust(4, '0')
+                            if max_val in omit_list or max_dir in omit_list:
+                                pass
+                            else:
+                                max_dt_str = f'{dt_str}{max_hhdd_str}'
+                                """最大值对应的出现时间"""
+                                max_dt_utc: arrow.Arrow = arrow.get(max_dt_str, 'YYYYMMDDhhmm').shift(hours=-8)
+                                max_ts: int = max_dt_utc.int_timestamp
+                                extremum_val_dict['max'] = WindExtremum(max_val, max_dir, max_ts)
+                    else:
+                        raise FileFormatError(f"文件:{full_path}shape异常")
+            except Exception:
+                raise FileReadError(f"读取:{full_path}错误")
+        return list_wind, extremum_val_dict
+
+    def get_extremum_list(self):
+        pass
 
 
 class SurgeReader(IReader):

@@ -115,7 +115,7 @@ def get_all_station_surgemax_byts(start_ts: int, end_ts: int):
 
 @app.get('/dist/dtrange/perclock/', response_model=List[DistStationRealdataListSchema],
          response_model_include=['station_code', 'surge_list', 'ts_list'],
-         summary="获取指定时间范围内的所有站点的极值实况极值")
+         summary="获取指定时间范围内的所有站点的实况集合")
 def get_dist_station_surge_list(start_ts: int, end_ts: int):
     dao = StationSurgeDao()
     res = dao.get_all_stations_realdata_list(start_ts, end_ts)
