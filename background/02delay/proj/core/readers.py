@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import arrow
 import pandas as pd
 
+from common.default import DEFAULT_VAL_LIST
 from common.exceptions import FileReadError, FileFormatError
 from core.files import IFile
 from mid_models.elements import WindExtremum
@@ -74,7 +75,7 @@ class WindReader(IReader):
         """
         list_wind: List[dict] = []
         extremum_val_dict: dict = {}
-        omit_list: List[float, int] = [999, 9998, 9999]
+        # omit_list: List[float, int] = [999, 9998, 9999]
         # step-1: 判断指定文件是否存在
         if pathlib.Path(full_path).exists():
             # step-2: 以 gbk 格式打开指定文件
@@ -110,11 +111,14 @@ class WindReader(IReader):
                             temp_ts: int = temp_dt_arrow.int_timestamp
                             temp_wd = realdata_series[index * step + 1]
                             temp_ws = realdata_series[index * step + 2]
-                            if temp_ws in omit_list or temp_wd in omit_list:
-                                pass
-                            else:
-                                temp_dict = {'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}
-                                list_wind.append(temp_dict)
+                            # TODO:[-] 24-04-11 在读取时不进行质控，改为在写入db时进行质控
+                            temp_dict = {'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}
+                            list_wind.append(temp_dict)
+                            # if temp_ws in DEFAULT_VAL_LIST or temp_wd in DEFAULT_VAL_LIST:
+                            #     pass
+                            # else:
+                            #     temp_dict = {'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}
+                            #     list_wind.append(temp_dict)
                         if rows > 3:
                             extremum_row = data.iloc[3]
                             """极值出现的行"""

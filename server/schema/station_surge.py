@@ -89,6 +89,20 @@ class DistStationSurgeListSchema(BaseModel):
     surge_list_schema: StationSurgeListSchema
 
 
+class DistStationWindListSchema(BaseModel):
+    """
+        + 24-04-09 风要素实况集合
+    """
+    station_code: str
+    ws_list: List[float]
+    ts_list: List[int]
+    dir_list: List[int]
+
+    class Config:
+        # 对于自定义model也需要设置此配置
+        orm_mode = True
+
+
 class DistStationTotalSurgeSchema(BaseModel):
     """
         按照不同站点嵌套 总潮位 schema

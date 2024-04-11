@@ -10,6 +10,7 @@ import pandas as pd
 from sqlalchemy import distinct, select, update
 from datetime import datetime
 
+from common.default import DEFAULT_SURGE, DEFAULT_WINDSPEED, DEFAULT_DIR
 from core.files import IFile, IStationFile
 from mid_models.elements import WindExtremum
 from util.decorators import decorator_timer_consuming
@@ -21,7 +22,7 @@ from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataMode
     WindPerclockExtremumDataModel
 from core.readers import SurgeReader
 from db.db import DbFactory, check_exist_tab
-from util.qc import is_standard_ws
+from util.qc import is_standard_ws, DEFAULT_VAL_LIST
 
 
 class IStore(ABC):
@@ -78,6 +79,11 @@ class SurgeStore(IStore):
             self.check_tab(arrow.get(temp_ts))
             SurgePerclockDataModel.set_split_tab_name(arrow.get(ts))
             temp_surge = val['surge']
+            temp_standard_val = temp_surge
+            """当前实况的标准化后数值(若为缺省值则统一赋值为标准缺省值"""
+            # TODO:[-] 24-04-11 新加入若存在缺省值，进行标准化后将标准化后的缺省值录入db
+            if temp_surge in DEFAULT_VAL_LIST:
+                temp_standard_val = DEFAULT_SURGE
             # TODO:[*] 24-04-07 加入指定表是否存在的判断，若不存在则创建
             stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == station_code,
                                                         SurgePerclockDataModel.issue_ts == temp_ts)
@@ -89,7 +95,7 @@ class SurgeStore(IStore):
                 update_stmt = (update(SurgePerclockDataModel).where(
                     SurgePerclockDataModel.station_code == station_code,
                     SurgePerclockDataModel.issue_ts == temp_ts).values(
-                    surge=temp_surge,
+                    surge=temp_standard_val,
                     station_code=station_code,
                     issue_ts=temp_ts,
                     gmt_modify_time=utc_now
@@ -97,7 +103,7 @@ class SurgeStore(IStore):
                 self.session.execute(update_stmt)
             # 若不存在则insert
             else:
-                temp_model = SurgePerclockDataModel(surge=temp_surge,
+                temp_model = SurgePerclockDataModel(surge=temp_standard_val,
                                                     station_code=station_code,
                                                     issue_ts=temp_ts,
                                                     issue_dt=temp_dt,
@@ -177,6 +183,11 @@ class PerclockWindStore(IStore):
 
     @decorator_timer_consuming
     def to_db(self, **kwargs):
+        """
+            将 风要素 实况与极值等写入 db
+        @param kwargs:
+        @return:
+        """
         ts: int = kwargs.get('ts')
         realdata_list: List[dict] = kwargs.get('realdata_list')
         max: WindExtremum = kwargs.get('max')
@@ -216,7 +227,15 @@ class PerclockWindStore(IStore):
             self.check_tab(arrow.get(temp_ts))
             WindPerclockDataModel.set_split_tab_name(arrow.get(ts))
             temp_ws = val['ws']
+            temp_standard_ws = temp_ws
+            """当前实况的标准化后数值(若为缺省值则统一赋值为标准缺省值"""
             temp_wd = val['wd']
+            temp_standard_wd = temp_ws
+            if temp_ws in DEFAULT_VAL_LIST:
+                temp_standard_ws = DEFAULT_WINDSPEED
+            if temp_wd in DEFAULT_VAL_LIST:
+                temp_standard_wd = DEFAULT_DIR
+            """当前实况的标准化后数值(若为缺省值则统一赋值为标准缺省值"""
             # TODO:[*] 24-04-07 加入指定表是否存在的判断，若不存在则创建
             stmt = select(WindPerclockDataModel).where(WindPerclockDataModel.station_code == station_code,
                                                        WindPerclockDataModel.issue_ts == temp_ts)
@@ -228,8 +247,8 @@ class PerclockWindStore(IStore):
                 update_stmt = (update(WindPerclockDataModel).where(
                     WindPerclockDataModel.station_code == station_code,
                     WindPerclockDataModel.issue_ts == temp_ts).values(
-                    ws=temp_ws,
-                    wd=temp_wd,
+                    ws=temp_standard_ws,
+                    wd=temp_standard_wd,
                     station_code=station_code,
                     issue_ts=temp_ts,
                     issue_dt=temp_dt,
@@ -238,8 +257,8 @@ class PerclockWindStore(IStore):
                 self.session.execute(update_stmt)
             # 若不存在则insert
             else:
-                temp_model = WindPerclockDataModel(ws=temp_ws,
-                                                   wd=temp_wd,
+                temp_model = WindPerclockDataModel(ws=temp_standard_ws,
+                                                   wd=temp_standard_wd,
                                                    station_code=station_code,
                                                    issue_ts=temp_ts,
                                                    issue_dt=temp_dt,
@@ -295,6 +314,13 @@ class PerclockWindStore(IStore):
                     issue_dt=arrow.get(max.ts).datetime,
                     gmt_modify_time=utc_now
                 ))
+                # TODO:[*] 24-04-09 尝试使用以下方式进行update
+                # test_filter.ws = max.val
+                # test_filter.wd = max.dir
+                # test_filter.station_code = station_code
+                # test_filter.issue_ts = max.ts
+                # test_filter.issue_dt = arrow.get(max.ts).datetime
+                # test_filter.gmt_modify_time = utc_now
                 self.session.execute(update_stmt_max)
                 pass
             else:

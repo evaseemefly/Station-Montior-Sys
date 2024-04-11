@@ -5,6 +5,7 @@ import arrow
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Query
 
 from dao.station_surge import StationSurgeDao, StationSurgeExtremeDao
+from dao.station_wind import StationWindDao
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
 from schema.station_status import StationSurgeSchema
 from schema.station_surge import SurgeRealDataSchema, SurgeRealDataJoinStationSchema, DistStationSurgeListSchema, \

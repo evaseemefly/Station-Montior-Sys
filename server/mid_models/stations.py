@@ -29,3 +29,16 @@ class DistStationSurgeListMidModel:
         self.station_code = code
         self.surge_list = surge_list
         self.ts_list = ts_list
+
+
+class DistStationWindListMidModel:
+    """
+        + 24-03-15 不同站点潮位集合
+        对应 DistStationSurgeListSchema
+    """
+
+    def __init__(self, code: str, ws_list: List[float], dir_list: List[int], ts_list: List[int]):
+        self.station_code = code
+        self.ws_list = ws_list
+        self.dir_list = dir_list
+        self.ts_list = ts_list
