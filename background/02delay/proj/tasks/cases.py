@@ -68,16 +68,18 @@ class StationRealdataDownloadCase(ICase):
             # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
-            StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.WIND]),
-            StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.WIND]),
-            StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.WIND]),
-            StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.WIND]),
-            StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.WIND]),
-            StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.WIND]),
-            StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.WIND]),
-            StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE]),
-            StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.WIND]),
-            StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.WIND]),
+            StationElementMidModel('02001', '02001', '东海2001大浮标', [ElementTypeEnum.FUB]),
+            StationElementMidModel('02002', '02002', '东海2002大浮标', [ElementTypeEnum.FUB]),
         ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
@@ -113,10 +115,41 @@ class StationRealdataDownloadCase(ICase):
         pass
 
 
+class FubRealdataDownloadCase(ICase):
+
+    def todo(self, **kwargs):
+        pass
+
+
 def timer_download_station_realdata():
     """
         站点下载定时器
     :return:
+    """
+    target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
+    now_ts: int = target_dt.int_timestamp
+    # local_root_path: str = '/Users/evaseemefly/03data/02station'
+    # TODO:[-] 24-03-27 采用 docker 容器内绝对路径为 /data/remote
+    # local_root_path: str = r'/data/remote'
+    local_root_path: str = r'D:\05data\05station_data'
+    # TODO:[-] 24-02-26 此处修改为remote的全路径
+    # remote_root_path: str = r'/home/nmefc/share/test/ObsData/'
+    # v2:不使用全路径，需改为 相对路径 /home/nmefc/share/test/ObsData/' -> test/ObsData/
+    # remote_root_path: str = r'test/ObsData/'
+    # v3: 修改为使用远端绝对路径
+    remote_root_path: str = r'/home/nmefc/share/test/ObsData/数据'
+
+    """当前时间的时间戳"""
+    logger.info(f"触发timer_download_station_realdata|ts:{now_ts}")
+
+    case = StationRealdataDownloadCase()
+    case.todo(ts=now_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
+
+
+def timer_download_fub_realdata():
+    """
+        TODO:[-] 24-04-17 处理浮标数据浮标数据为每小时一个文件，需要单独处理每个整点的数据
+    @return:
     """
     target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
     now_ts: int = target_dt.int_timestamp

@@ -9,7 +9,8 @@ from typing import Optional, List, Dict
 import arrow
 
 from util.ftp import FtpClient
-from util.common import get_store_relative_path, get_filestamp, get_calendarday_filestamp
+from util.common import get_store_relative_path, get_filestamp, get_calendarday_filestamp, \
+    get_store_relative_exclude_day, get_fulltime_stamp
 from common.enums import ElementTypeEnum
 from util.decorators import decorator_timer_consuming, decorator_exception_logging
 
@@ -84,19 +85,6 @@ class IFile(ABC):
         return is_ok
 
 
-class FubFile(IFile):
-    """
-        浮标 file
-        + 暂时不实现
-    """
-
-    def get_local_path(self, ts: int) -> str:
-        pass
-
-    def get_remote_path(self, ts: int) -> str:
-        pass
-
-
 class IStationFile(IFile):
     """
         海洋站 file 实现类
@@ -159,6 +147,67 @@ class IStationFile(IFile):
         :return:
         """
         pass
+
+
+class FubFile(IStationFile):
+    """
+        浮标 file
+        + 24-04-15 实现了 浮标 file 的相关属性及逻辑
+        存储路径:
+            \FUB\MF02001\2024\04
+        文件名:
+            202404010000MF02001.dat
+    """
+
+    def get_local_path(self) -> str:
+        """
+            本地存储路径
+        @return:
+        """
+        relative_path: str = get_store_relative_exclude_day(self.ts)
+        """存储的相对路径(yyyy/mm)"""
+        path = pathlib.Path(self.local_root_path) / self.station_name / relative_path
+        return str(path)
+
+    def get_remote_path(self) -> str:
+        """
+            浮标存储相对路径
+        @param ts:
+        @return:
+        """
+        relative_path: str = get_store_relative_exclude_day(self.ts)
+        """存储的相对路径(yyyy/mm)"""
+        # eg: E:\05DATA\99test\FUB\MF02001\2024\04
+        path = pathlib.Path(self.remote_root_path) / self.station_name / relative_path
+        # TODO:[-] 24-03-27 此处若运行在win下需要手动将其转换为 linux 路径格式
+        path = path.as_posix()
+        return str(path)
+
+    def get_relative_path(self) -> str:
+        """
+            相对于 self.remote_root_path 的相对路径
+            remote_path:              '/test/ObsData/SHW/2024/02/20'
+            实际路径: E:/05DATA/99test/FUB/MF02001/2024/04
+        @return: eg: /test/ObsData/SHW/2024/02/20
+        """
+        relative_path: str = get_store_relative_exclude_day(self.ts)
+        path = pathlib.Path(self.station_name) / relative_path
+        return str(path)
+
+    def get_file_name(self) -> str:
+        """
+
+                    eg: WL0115.08442
+                        WL0115_DAT.08442
+                :param ts:
+                :return:
+                """
+        date_str: str = get_fulltime_stamp(self.ts)
+        fub_stamp: str = 'MF'
+        # eg: 202403010000MF02004.dat
+        file_name: str = f'{date_str}{fub_stamp}{self.station_code}.dat.xml'
+        """202403010000MF02004.dat"""
+        return file_name
 
 
 class SurgeFile(IStationFile):

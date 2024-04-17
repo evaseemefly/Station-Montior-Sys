@@ -1,17 +1,22 @@
 """
     + 24-01-12 各类阅读器 包
 """
+import ast
 import logging
 from abc import ABC, abstractmethod, abstractproperty
 import pathlib
+import io
+import xml.etree.ElementTree as ET
+# from xml.etree.
 from typing import Optional, List, Dict, Any, Tuple
 import arrow
 import pandas as pd
 
-from common.default import DEFAULT_VAL_LIST
+from common.default import DEFAULT_VAL_LIST, DEFAULT_CODE, DEFAULT_DT_STR
 from common.exceptions import FileReadError, FileFormatError
 from core.files import IFile
-from mid_models.elements import WindExtremum
+from mid_models.elements import WindExtremum, FubElement, FubElementMidModel, FubMidModel
+from util.factory import factory_get_fubelements_val
 from util.ftp import FtpClient
 from util.common import get_store_relative_path
 from common.enums import ElementTypeEnum
@@ -128,7 +133,7 @@ class WindReader(IReader):
                             """极值对应的风向"""
                             extremum_hhdd: float = extremum_row.iloc[2]
                             extremum_hhdd_str: str = str(int(extremum_hhdd)).rjust(4, '0')
-                            if extremum_val in omit_list or extremum_dir in omit_list:
+                            if extremum_val in DEFAULT_VAL_LIST or extremum_dir in DEFAULT_VAL_LIST:
                                 pass
                             else:
                                 extremum_dt_str = f'{dt_str}{extremum_hhdd_str}'
@@ -151,7 +156,7 @@ class WindReader(IReader):
                             # TODO:[*] 24-04-09 由于 使用 serise.iloc[index] 读取后的某列数值为 float，需要转换为 str
                             # 例如原始数据为: 0747 -> 747.0 -> 0747 需要向左侧填充4位0
                             max_hhdd_str: str = str(int(max_hhdd)).rjust(4, '0')
-                            if max_val in omit_list or max_dir in omit_list:
+                            if max_val in DEFAULT_VAL_LIST or max_dir in DEFAULT_VAL_LIST:
                                 pass
                             else:
                                 max_dt_str = f'{dt_str}{max_hhdd_str}'
@@ -437,3 +442,67 @@ class SurgeReader(IReader):
             except Exception as ex:
                 logging.error(f'读取极值集合出错!')
         return list_dict
+
+
+class FubReader(IReader):
+    """
+        浮标阅读器读取的浮标数据并为包含极值，只包含同一个时刻的不同的要素
+    """
+
+    def __init__(self, file: IFile):
+        super().__init__(file)
+        self.list_val: List[FubElement] = []
+        """浮标站点的同一时刻的各类观测要素"""
+        self.elements: List[ElementTypeEnum] = [ElementTypeEnum.WS, ElementTypeEnum.WD, ElementTypeEnum.WSM,
+                                                ElementTypeEnum.BP, ElementTypeEnum.BG, ElementTypeEnum.YBG]
+        """需要获取的观测要素列表"""
+        pass
+
+    def read_file(self, full_path: str) -> Optional[FubMidModel]:
+        if pathlib.Path(full_path).exists():
+            # step-2: 以 gbk 格式打开指定文件
+            try:
+                # 注意此处的encoding格式
+                with io.open(full_path, 'r', encoding='GB2312') as f:
+                    contents = f.read()
+                    tree_root = ET.fromstring(contents)
+                    fub_rpt: Optional[ET.Element] = tree_root.find('BuoyageRpt')
+                    """BuoyageRpt节点"""
+                    list_vals: List[FubElementMidModel] = []
+                    fub_mid_model: Optional[FubMidModel] = None
+                    fub_code: str = DEFAULT_CODE
+                    dt_str: str = DEFAULT_DT_STR
+                    """当前浮标文件需要获取的要素mid model集合"""
+
+                    if fub_rpt is not None:
+                        # 获取浮标站代号与当前时间
+                        fub_code = fub_rpt.find('BuoyInfo').attrib['NO']
+                        """浮标站代号"""
+                        dt_str: str = fub_rpt.find('DateTime').attrib['DT']
+                        buyo_data_node: Optional[ET.Element] = fub_rpt.find('HugeBuoyData').find('BuoyData')
+                        """当前时间str"""
+                        for temp_ele in self.elements:
+                            element_stamp: str = factory_get_fubelements_val(temp_ele)
+                            if buyo_data_node is not None:
+                                temp_element_val: str = buyo_data_node.attrib[element_stamp]
+                                """当前要素对应的值"""
+                                temp_element_mid: FubElementMidModel = FubElementMidModel(temp_ele, ast.literal_eval(
+                                    temp_element_val))
+                                """当前要素的middle model"""
+                                list_vals.append(temp_element_mid)
+
+                    ts: int = arrow.get(dt_str, 'YYYYMMDDHHmm').int_timestamp
+                    fub_mid_model = FubMidModel(fub_code, ts, list_vals)
+                    return fub_mid_model
+
+            except Exception:
+                raise FileReadError(f"读取:{full_path}错误")
+
+    def get_fub_realdata(self, ts: int) -> Optional[FubMidModel]:
+        """
+            获取浮标实况数据middle model
+        @param ts:
+        @return:
+        """
+        fub_mid_model = self.read_file(self.file.local_full_path)
+        return fub_mid_model

@@ -10,8 +10,8 @@ import pandas as pd
 
 from common.exceptions import FtpDownLoadError
 from core.files import IFile, IStationFile
-from core.readers import SurgeReader, WindReader
-from core.storers import SurgeStore, PerclockWindStore
+from core.readers import SurgeReader, WindReader, FubReader
+from core.storers import SurgeStore, PerclockWindStore, PerclockFubStore
 from mid_models.elements import WindExtremum
 from util.decorators import decorator_timer_consuming
 
@@ -63,4 +63,21 @@ class SurgeOperate(IOperater):
             SurgeStore(self.file).to_db(realdata_list=realdata_list, extremum_list=extremum_list, ts=ts)
         else:
             # TODO:[-] 24-01-19 抛出异常
+            raise FtpDownLoadError()
+
+
+class FubOperate(IOperater):
+
+    @decorator_timer_consuming
+    def todo(self, **kwargs):
+        ts = kwargs.get('ts')
+        code = self.file.station_code
+        # step1: 下载文件
+        if self.file.download():
+            fub_reader = FubReader(self.file)
+            fub_realdata_list = fub_reader.get_fub_realdata(ts)
+            PerclockFubStore(self.file).to_db(realdata_list=fub_realdata_list, ts=ts, code=code)
+            pass
+        else:
+            # 抛出异常
             raise FtpDownLoadError()

@@ -73,6 +73,19 @@ def get_utc_day(ts: int) -> str:
     return day_str
 
 
+def get_store_relative_exclude_day(ts: int) -> str:
+    """
+        根据当前时间获取 存储相对路径 (fub为例)
+        /2024/04
+    @param ts:
+    @return:
+    """
+    year: str = get_localtime_year(ts)
+    month: str = get_localtime_month(ts)
+    path = pathlib.Path(year) / month
+    return str(path)
+
+
 def get_store_relative_path(ts: int) -> str:
     """
         获取存储的相对路径 yyyy/mm/dd
@@ -173,3 +186,20 @@ def get_calendarday_filestamp(ts: int) -> str:
     dt_arrow: arrow.Arrow = arrow.get(ts)
     mmdd = dt_arrow.shift(days=1).format(format_str)
     return mmdd
+
+
+def get_fulltime_stamp(ts: int) -> str:
+    """
+        根据当前传入的时间戳获取对应的时间 str
+        YYYYMMDDHHmm
+        返回的日期戳为世界时(utc)
+    @param ts: 当前时间戳
+    @return:
+    """
+    format_str: str = 'YYYYMMDDHHmm'
+    # 传入的时间对应的 dt
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    date_str: str = ''
+    '''时间str戳'''
+    date_str = dt_arrow.format(format_str)
+    return date_str

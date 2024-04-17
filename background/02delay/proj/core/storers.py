@@ -12,14 +12,14 @@ from datetime import datetime
 
 from common.default import DEFAULT_SURGE, DEFAULT_WINDSPEED, DEFAULT_DIR
 from core.files import IFile, IStationFile
-from mid_models.elements import WindExtremum
+from mid_models.elements import WindExtremum, FubElementMidModel
 from util.decorators import decorator_timer_consuming
 from util.ftp import FtpClient
 from util.common import get_store_relative_path, get_standard_datestamp
 from common.enums import ElementTypeEnum, ExtremumType
 
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, WindPerclockDataModel, \
-    WindPerclockExtremumDataModel
+    WindPerclockExtremumDataModel, FubPerclockDataModel
 from core.readers import SurgeReader
 from db.db import DbFactory, check_exist_tab
 from util.qc import is_standard_ws, DEFAULT_VAL_LIST
@@ -369,6 +369,73 @@ class PerclockWindStore(IStore):
                                                                     )
                 self.session.add(temp_extremum_model)
                 pass
+        self.session.commit()
+        self.session.close()
+        pass
+
+
+class PerclockFubStore(IStore):
+    """
+        整点浮标数据存储器
+    """
+
+    def __init__(self, file: IStationFile):
+        self.file = file
+        self.session = DbFactory().Session
+
+    @decorator_timer_consuming
+    def to_db(self, **kwargs):
+        """
+            执行各种写入db操作
+        @param kwargs:
+        @return:
+        """
+        ts: int = kwargs.get('ts')
+        """当前写入的时间戳"""
+        code: str = kwargs.get('code')
+        realdata: List[FubElementMidModel] = kwargs.get('realdata')
+        self._loop_realdata_2db(realdata, ts, code)
+
+    def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str):
+        """
+            将浮标实况写入 db
+        @param realdata:
+        @param ts:
+        @return:
+        """
+
+        # 根据传入的实况 realdata 将每个要素写入 db
+        utc_arrow: arrow.Arrow = arrow.utcnow()
+        utc_dt: datetime = utc_arrow.datetime
+        now_ts: int = utc_arrow.int_timestamp
+        for temp in realdata:
+            stmt = select(FubPerclockDataModel).where(FubPerclockDataModel.station_code == code,
+                                                      FubPerclockDataModel.issue_ts == ts,
+                                                      FubPerclockDataModel.element_type == temp.element_type.value)
+            filter_res = self.session.execute(stmt).fetchall()
+            if len(filter_res) > 0:
+                # 更新
+                update_stmt = update(FubPerclockDataModel).where(FubPerclockDataModel.station_code == code,
+                                                                 FubPerclockDataModel.issue_ts == ts,
+                                                                 FubPerclockDataModel.element_type == temp.element_type.value).values(
+                    gmt_modify_time=utc_dt,
+                    element_type=temp.element_type.value,
+                    value=temp.val
+                )
+                """更新stmt"""
+                self.session.execute(update_stmt)
+                pass
+            else:
+                # 新增
+                create_model = FubPerclockDataModel(gmt_modify_time=utc_dt,
+                                                    gmt_create_time=utc_dt,
+                                                    element_type=temp.element_type.value,
+                                                    value=temp.val,
+                                                    issue_dt=arrow.get(ts).datetime, issue_ts=ts, station_code=code)
+                """等待更新的model"""
+                self.session.add(create_model)
+                pass
+
         self.session.commit()
         self.session.close()
         pass
