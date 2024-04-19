@@ -12,7 +12,7 @@ from datetime import datetime
 
 from common.default import DEFAULT_SURGE, DEFAULT_WINDSPEED, DEFAULT_DIR
 from core.files import IFile, IStationFile
-from mid_models.elements import WindExtremum, FubElementMidModel
+from mid_models.elements import WindExtremum, FubElementMidModel, FubMidModel
 from util.decorators import decorator_timer_consuming
 from util.ftp import FtpClient
 from util.common import get_store_relative_path, get_standard_datestamp
@@ -393,8 +393,10 @@ class PerclockFubStore(IStore):
         ts: int = kwargs.get('ts')
         """当前写入的时间戳"""
         code: str = kwargs.get('code')
-        realdata: List[FubElementMidModel] = kwargs.get('realdata')
-        self._loop_realdata_2db(realdata, ts, code)
+        realdata: FubMidModel = kwargs.get('realdata_list')
+        fub_code: str = realdata.code
+        realdata_list: List[FubElementMidModel] = realdata.list_vals
+        self._loop_realdata_2db(realdata_list, ts, fub_code)
 
     def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str):
         """

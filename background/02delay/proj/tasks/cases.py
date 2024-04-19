@@ -68,23 +68,22 @@ class StationRealdataDownloadCase(ICase):
             # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
-            # StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE]),
-            # StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.WIND]),
-            StationElementMidModel('02001', '02001', '东海2001大浮标', [ElementTypeEnum.FUB]),
-            StationElementMidModel('02002', '02002', '东海2002大浮标', [ElementTypeEnum.FUB]),
+            StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.WIND]),
+            StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.WIND]),
+            StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.WIND]),
+            StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.WIND]),
+            StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.WIND]),
+            StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.WIND]),
+            StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.WIND]),
+            StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.WIND]),
+            StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.WIND]),
         ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
         # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)
         stand_start_ts: int = get_station_start_ts(ts)
+        """世界时"""
         local_root_path: str = kwargs.get('local_root_path')
         remote_root_path: str = kwargs.get('remote_root_path')
 
@@ -118,6 +117,51 @@ class StationRealdataDownloadCase(ICase):
 class FubRealdataDownloadCase(ICase):
 
     def todo(self, **kwargs):
+        """
+
+        @param kwargs:
+        @return:
+        """
+        # TODO:[*] 24-02-27 注意例如站点不存在某个要素的整点数据，例如潮位数据WL 莆田不存在，则会报错
+        list_station: List[StationElementMidModel] = [
+            StationElementMidModel('02001', '02001', 'MF02001', [ElementTypeEnum.FUB]),
+            StationElementMidModel('02004', '02004', 'MF02004', [ElementTypeEnum.FUB]),
+        ]
+        ftp = self.ftp_client
+        ts = kwargs.get('ts')
+        # TODO:[*] 24-04-19 浮标case不需要对ts进行标准化，此处后续需要修改
+        # stand_start_ts: int = get_station_start_ts(ts)
+        stand_start_ts: int = ts
+        """世界时"""
+        local_root_path: str = kwargs.get('local_root_path')
+        remote_root_path: str = kwargs.get('remote_root_path')
+
+        # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
+        for val_station in list_station:
+            logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
+            for val_element in val_station.elements:
+                logger.info(
+                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}')
+                # step2-1:根据工厂方法获取当前要素对应的文件
+                cls = factory_get_station_file(val_element)
+                """ 文件类"""
+                file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code,
+                                                  val_station.station_name,
+                                                  val_station.station_num, stand_start_ts,
+                                                  remote_root_path)
+                """ 文件类实例化对象"""
+                # step2-2:文件下载
+                # step2-3:文件读取
+                # step2-4:文件写入db
+                # 以上均在操作类中实现
+                cls_operate = factory_get_operater(val_element)
+                """操作类"""
+                instance_operate: IOperater = cls_operate(file_instance)
+                """ 操作类实例化对象"""
+                instance_operate.todo(ts=stand_start_ts)
+            pass
+        pass
+
         pass
 
 
@@ -152,23 +196,45 @@ def timer_download_fub_realdata():
     @return:
     """
     target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
+    """utc时"""
     now_ts: int = target_dt.int_timestamp
-    # local_root_path: str = '/Users/evaseemefly/03data/02station'
     # TODO:[-] 24-03-27 采用 docker 容器内绝对路径为 /data/remote
-    # local_root_path: str = r'/data/remote'
     local_root_path: str = r'D:\05data\05station_data'
     # TODO:[-] 24-02-26 此处修改为remote的全路径
-    # remote_root_path: str = r'/home/nmefc/share/test/ObsData/'
-    # v2:不使用全路径，需改为 相对路径 /home/nmefc/share/test/ObsData/' -> test/ObsData/
-    # remote_root_path: str = r'test/ObsData/'
     # v3: 修改为使用远端绝对路径
     remote_root_path: str = r'/home/nmefc/share/test/ObsData/数据'
 
     """当前时间的时间戳"""
     logger.info(f"触发timer_download_station_realdata|ts:{now_ts}")
 
-    case = StationRealdataDownloadCase()
+    case = FubRealdataDownloadCase()
     case.todo(ts=now_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
+
+
+def task_downloads_fub_byrange(start_ts: int, end_ts: int, split_hours=1):
+    """
+        根据 起止时间以及切分 hours批量下载并写入浮标数据
+    @param start_ts:
+    @param end_ts:
+    @param split_hours:
+    @return:
+    """
+    timestamps = []
+    current_time = arrow.get(start_ts)
+
+    while current_time.int_timestamp <= end_ts:
+        timestamps.append(current_time.int_timestamp)
+        current_time = current_time.shift(hours=1)
+
+    for temp_ts in timestamps:
+        local_root_path: str = r'D:\05data\05station_data'
+        # TODO:[-] 24-02-26 此处修改为remote的全路径
+        # v3: 修改为使用远端绝对路径
+        remote_root_path: str = r'/home/nmefc/share/test/ObsData/数据'
+        """当前时间的时间戳"""
+        logger.info(f"触发timer_download_station_realdata|ts:{temp_ts}")
+        case = FubRealdataDownloadCase()
+        case.todo(ts=temp_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
 
 
 def delay_task():
@@ -182,6 +248,7 @@ def delay_task():
     # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
     logger.info('[-]启动定时任务触发事件:')
     # 十分钟/次 的定时下载站点任务
+    # scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
     scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
     # # 启动调度任务
     scheduler.start()

@@ -164,7 +164,7 @@ class WindPerclockExtremumDataModel(IStation, ITimestampModel):
     """极值种类: 极值|最大值"""
 
 
-class FubPerclockDataModel(ITimestampModel):
+class FubPerclockDataModel(IStation, ITimestampModel):
     """
         + 24-04-17 对应的浮标整点数据
         采用了方式二的实现方式，采取多冗余设计，减少耦合

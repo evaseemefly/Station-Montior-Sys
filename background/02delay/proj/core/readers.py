@@ -15,8 +15,8 @@ import pandas as pd
 from common.default import DEFAULT_VAL_LIST, DEFAULT_CODE, DEFAULT_DT_STR
 from common.exceptions import FileReadError, FileFormatError
 from core.files import IFile
-from mid_models.elements import WindExtremum, FubElement, FubElementMidModel, FubMidModel
-from util.factory import factory_get_fubelements_val
+from mid_models.elements import WindExtremum, FubElementMidModel, FubMidModel
+from util.getters import factory_get_fubelements_val
 from util.ftp import FtpClient
 from util.common import get_store_relative_path
 from common.enums import ElementTypeEnum
@@ -451,7 +451,7 @@ class FubReader(IReader):
 
     def __init__(self, file: IFile):
         super().__init__(file)
-        self.list_val: List[FubElement] = []
+        self.list_val: List[FubElementMidModel] = []
         """浮标站点的同一时刻的各类观测要素"""
         self.elements: List[ElementTypeEnum] = [ElementTypeEnum.WS, ElementTypeEnum.WD, ElementTypeEnum.WSM,
                                                 ElementTypeEnum.BP, ElementTypeEnum.BG, ElementTypeEnum.YBG]

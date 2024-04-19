@@ -203,3 +203,20 @@ def get_fulltime_stamp(ts: int) -> str:
     '''时间str戳'''
     date_str = dt_arrow.format(format_str)
     return date_str
+
+
+def get_local_fulltime_stamp(ts: int) -> str:
+    """
+        根据当前传入的时间戳获取对应的时间 str
+        YYYYMMDDHHmm
+        返回的日期戳为世界时(本地时)
+    @param ts: 当前时间戳
+    @return:
+    """
+    format_str: str = 'YYYYMMDDHHmm'
+    # 传入的时间对应的 dt
+    dt_arrow: arrow.Arrow = arrow.get(ts).shift(hours=8)
+    date_str: str = ''
+    '''时间str戳'''
+    date_str = dt_arrow.format(format_str)
+    return date_str

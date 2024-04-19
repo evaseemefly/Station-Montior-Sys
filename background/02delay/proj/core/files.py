@@ -10,7 +10,7 @@ import arrow
 
 from util.ftp import FtpClient
 from util.common import get_store_relative_path, get_filestamp, get_calendarday_filestamp, \
-    get_store_relative_exclude_day, get_fulltime_stamp
+    get_store_relative_exclude_day, get_fulltime_stamp, get_local_fulltime_stamp
 from common.enums import ElementTypeEnum
 from util.decorators import decorator_timer_consuming, decorator_exception_logging
 
@@ -196,13 +196,11 @@ class FubFile(IStationFile):
 
     def get_file_name(self) -> str:
         """
-
-                    eg: WL0115.08442
-                        WL0115_DAT.08442
-                :param ts:
-                :return:
-                """
-        date_str: str = get_fulltime_stamp(self.ts)
+            202403010000MF02004.dat
+            注意文件名为本地时间
+        @return: 202403010000MF02004.dat
+        """
+        date_str: str = get_local_fulltime_stamp(self.ts)
         fub_stamp: str = 'MF'
         # eg: 202403010000MF02004.dat
         file_name: str = f'{date_str}{fub_stamp}{self.station_code}.dat.xml'
