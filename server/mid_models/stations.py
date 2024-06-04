@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Union
 
-from common.enums import ElementTypeEnum
+from common.enums import ElementTypeEnum, ObservationTypeEnum
 
 
 class StationElementMidModel:
@@ -42,3 +42,32 @@ class DistStationWindListMidModel:
         self.ws_list = ws_list
         self.dir_list = dir_list
         self.ts_list = ts_list
+
+
+class StationInstanceMidModel:
+    """
+        + 24-05-28
+        参考 mid_modlers -> FubListMidModel
+    """
+
+    def __init__(self, code: str, element_type: ElementTypeEnum, ts_list: List[int],
+                 val_list: List[Union[float, int]]):
+        self.station_code = code
+        self.element_type = element_type
+        """要素枚举类型"""
+        self.ts_list = ts_list
+        """对应的时间戳"""
+        self.val_list = val_list
+        """时间戳对应的观测要素值"""
+
+
+class DistStationListMidModel:
+    """
+        + 24-05-28
+        参考 mid_modlers -> DistFubListMidModel
+    """
+
+    def __init__(self, code: str, obs_type: ObservationTypeEnum, observation_list: List[StationInstanceMidModel]):
+        self.code = code
+        self.obs_type = obs_type
+        self.observation_list = observation_list

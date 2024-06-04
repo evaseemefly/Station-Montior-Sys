@@ -3,6 +3,7 @@ from enum import Enum, unique
 
 @unique
 class ElementTypeEnum(Enum):
+
     """
         观测要素种类枚举
         501-风
@@ -27,5 +28,28 @@ class ElementTypeEnum(Enum):
     YBG = 509
     """有效波高"""
 
+    WL = 510
+    """潮位"""
+
     FUB = 601
     """浮标"""
+    MooringBuoy = 602
+    """锚系浮标"""
+
+    LargeBuoy = 611
+    """大浮标"""
+
+
+@unique
+class ObservationTypeEnum(Enum):
+    """
+        观测站点类型
+    """
+    """海洋站"""
+    STATION = 600
+
+    """水利部海洋站"""
+    STATION_IRRIGATION = 603
+
+    """浮标"""
+    FUB = 601

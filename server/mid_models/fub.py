@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 
-from common.enums import ElementTypeEnum
+from common.enums import ElementTypeEnum, ObservationTypeEnum
 
 
 class FubListMidModel:
@@ -14,7 +14,7 @@ class FubListMidModel:
         # def __init__(self, code: str, element_type: ElementTypeEnum, ts_list: List[int],
         #              val_list: List[float]):
         self.station_code = code
-        self.elemtn_type = element_type
+        self.element_type = element_type
         """要素枚举类型"""
         self.ts_list = ts_list
         """对应的时间戳"""
@@ -23,6 +23,7 @@ class FubListMidModel:
 
 
 class DistFubListMidModel:
-    def __init__(self, code: str, observation_list: List[FubListMidModel]):
+    def __init__(self, code: str, obs_type: ObservationTypeEnum, observation_list: List[FubListMidModel]):
         self.code = code
+        self.obs_type = obs_type
         self.observation_list = observation_list

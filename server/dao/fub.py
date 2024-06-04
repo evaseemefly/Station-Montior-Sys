@@ -1,4 +1,5 @@
 import ast
+import json
 from typing import List, Optional, Any, Union
 from datetime import datetime
 import arrow
@@ -7,7 +8,8 @@ from sqlalchemy import select, update, func, and_, text, TextClause, union_all, 
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import func
 
-from common.enums import ElementTypeEnum
+from common.enums import ElementTypeEnum, ObservationTypeEnum
+from dao.station import get_remote_service
 from mid_models.fub import DistFubListMidModel, FubListMidModel
 from models.fub import FubPerclockDataModel
 
@@ -26,7 +28,7 @@ class FubDao(BaseDao):
 
     def get_fubs_realdata_list(self, codes: List[str], start_ts: int, end_ts: int) -> List[DistFubListMidModel]:
         """
-            根据传入的 codes 获取起止时间范围内的所有观测要素的集合
+            根据传入的 codes 获取起止时间范围内的所有观测要素的集合(fub)
         :param codes:
         :param end_ts:
         :return:
@@ -75,5 +77,21 @@ class FubDao(BaseDao):
                                                                      temp_val_list)
                 fub_realdata_list.append(temp_fub_realdata)
                 pass
-            fubs_obserivation_list.append(DistFubListMidModel(temp_code, fub_realdata_list))
+            fubs_obserivation_list.append(DistFubListMidModel(temp_code, ObservationTypeEnum.FUB, fub_realdata_list))
         return fubs_obserivation_list
+
+    def get_all_fubs_codes(self) -> List[str]:
+        """
+            获取所有站点的浮标codes
+        :return:
+        """
+        res_content = get_remote_service('/fub/dist/codes', {})
+        return json.loads(res_content)
+
+    def get_all_fubs(self) -> List[dict]:
+        """
+            获取所有fubs的信息
+        :return:
+        """
+        res_content = get_remote_service('/fub/all/info', {})
+        return json.loads(res_content)

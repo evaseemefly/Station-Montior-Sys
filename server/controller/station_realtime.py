@@ -4,9 +4,11 @@ from datetime import datetime
 import arrow
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Query
 
+from dao.station import StationBaseDao
 from dao.station_surge import StationSurgeDao, StationSurgeExtremeDao
 from dao.station_wind import StationWindDao
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel
+from schema.fub import DistFubObservationSchema
 from schema.station_status import StationSurgeSchema
 from schema.station_surge import SurgeRealDataSchema, SurgeRealDataJoinStationSchema, DistStationSurgeListSchema, \
     DistStationRealdataListSchema
@@ -120,4 +122,15 @@ def get_dist_station_surgemax_byts(start_ts: int, end_ts: int):
 def get_dist_station_surge_list(start_ts: int, end_ts: int):
     dao = StationSurgeDao()
     res = dao.get_all_stations_realdata_list(start_ts, end_ts)
+    return res
+
+
+@app.get('/many/perclock/', response_model=List[DistFubObservationSchema],
+         response_model_include=['code', 'observation_list', 'obs_type'],
+         summary="获取不同站点的风要素集合")
+def get_many_stations_byts(start_ts: int, end_ts: int,
+                           station_codes: List[str] = Query(None, alias="station_codes[]", type=List[str])):
+    # TODO:[-] 24-05-08 此处遇见一个bug是
+    dao = StationBaseDao()
+    res = dao.get_stations_realdata_list(station_codes, start_ts, end_ts)
     return res
