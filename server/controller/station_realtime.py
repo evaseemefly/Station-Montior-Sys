@@ -130,7 +130,7 @@ def get_dist_station_surge_list(start_ts: int, end_ts: int):
          summary="获取不同站点的风要素集合")
 def get_many_stations_byts(start_ts: int, end_ts: int,
                            station_codes: List[str] = Query(None, alias="station_codes[]", type=List[str])):
-    # TODO:[-] 24-05-08 此处遇见一个bug是
+    # TODO:[-] 24-06-19 此处修复了bug:会根据起止时间戳生成对应的时间戳集合，查询结果会与时间戳集合进行索引，对于空缺的填充缺省值
     dao = StationBaseDao()
     res = dao.get_stations_realdata_list(station_codes, start_ts, end_ts)
     return res

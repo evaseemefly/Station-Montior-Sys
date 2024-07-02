@@ -1,5 +1,9 @@
+from typing import List
+
 import arrow
 import pathlib
+
+from common.default import PERCLOCK_DIFF_MS
 
 
 def get_utc_year(ts: int) -> str:
@@ -153,3 +157,16 @@ def get_calendarday_filestamp(ts: int) -> str:
     dt_arrow: arrow.Arrow = arrow.get(ts)
     mmdd = dt_arrow.shift(days=1).format(format_str)
     return mmdd
+
+
+def get_diff_timestamp_list(start_ts: int, end_ts: int, step: int = 60 * 60) -> List[int]:
+    """
+        end_ts -start_ts 并根据 step 生成对应的 ts 集合
+    :param start_ts: 起始时间戳
+    :param end_ts:   结束时间戳
+    :param step:     间隔（整点）
+    :return:
+    """
+    # TODO:[*] 24-06-18 使用range的stop并不包含stop，所以需要对stop+step操作
+    ts_list = [i for i in range(start_ts, end_ts + step, step)]
+    return ts_list

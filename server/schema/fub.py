@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Union
+from typing import List, Union, Optional
 
 from pydantic import BaseModel, Field
 
@@ -13,7 +13,8 @@ class FubObservationSchema(BaseModel):
     station_code: str
     element_type: ElementTypeEnum
     ts_list: List[int]
-    val_list: List[Union[float, int]]
+    # TODO:[*] 24-06-19 观测值有可能为NAN,此处加入允许为空的声明
+    val_list: Optional[List[Optional[Union[float, int]]]] = None
 
     # val_list: List[float]
 

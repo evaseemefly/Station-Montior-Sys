@@ -2,7 +2,10 @@ from typing import List, Optional, Any, Dict
 import json
 
 import arrow
+import numpy as np
+import pandas as pd
 
+from common.default import DEFAULT_SURGE, NAN_VAL
 from common.enums import ElementTypeEnum, ObservationTypeEnum
 from mid_models.stations import DistStationListMidModel, StationInstanceMidModel
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, WindPerclockDataModel, \
@@ -14,6 +17,7 @@ from sqlalchemy import union, union_all
 from sqlalchemy.orm import Session
 from dao.base import BaseDao
 from schema.station_surge import AstronomicTideSchema, DistStationTideListSchema
+from util.common import get_diff_timestamp_list
 
 from util.consul import ConsulExtractClient
 
@@ -172,6 +176,8 @@ class StationBaseDao(BaseDao):
         tab_name: str = WindPerclockDataModel.get_split_tab_name(start_ts)
         station_obserivation_list: List[DistStationListMidModel] = []
         """被查询海洋站的观测数据集合"""
+        # TODO:[*] 24-06-18 应加入基于起止时间的时间戳集合范围标准化（对于缺省值进行填充） 时间戳单位(s)
+        list_ts_standard: List[int] = get_diff_timestamp_list(start_ts, end_ts)
 
         for temp_code in codes:
             # step 2-1: 获取海洋站风要素实况
@@ -218,24 +224,39 @@ class StationBaseDao(BaseDao):
             """风要素-风向集合"""
             temp_ws_list: List[float] = []
             """风要素-风速集合"""
+
+            # TODO:[*] 24-06-19 以下内容使用列表推导替代
             # 根据查询结果生成风要素数据集
-            for temp_wind_ in combined_res_wind:
-                """
-                    query_model_.c.ws,              0
-                    query_model_.c.wd,              1
-                    query_model_.c.station_code,    2
-                    query_model_.c.issue_ts         3
-                """
-                # fub_realdata_list: List[DistStationListMidModel] = []
-                temp_ts_: int = temp_wind_[3]
-                """时间戳"""
-                temp_wd_: int = temp_wind_[1]
-                """风向"""
-                temp_ws_: float = temp_wind_[0]
-                """风速"""
-                temp_ts_list.append(temp_ts_)
-                temp_wd_list.append(temp_wd_)
-                temp_ws_list.append(temp_ws_)
+            # for temp_wind_ in combined_res_wind:
+            #     """
+            #         query_model_.c.ws,              0
+            #         query_model_.c.wd,              1
+            #         query_model_.c.station_code,    2
+            #         query_model_.c.issue_ts         3
+            #     """
+            #     # fub_realdata_list: List[DistStationListMidModel] = []
+            #     temp_ts_: int = temp_wind_[3]
+            #     """时间戳"""
+            #     temp_wd_: int = temp_wind_[1]
+            #     """风向"""
+            #     temp_ws_: float = temp_wind_[0]
+            #     """风速"""
+            #     temp_ts_list.append(temp_ts_)
+            #     temp_wd_list.append(temp_wd_)
+            #     temp_ws_list.append(temp_ws_)
+            # step1-2 :针对风要素生成对应的数组
+            temp_wind_ts_list = [i[3] for i in combined_res_wind]
+            """风要素对应的ts数组"""
+            temp_wd_list = [i[1] for i in combined_res_wind]
+            temp_ws_list = [i[0] for i in combined_res_wind]
+
+            # step1-3: 生成风要素df
+            combined_res_wind_df = pd.DataFrame({"ts": temp_wind_ts_list, 'wd': temp_wd_list, 'ws': temp_ws_list})
+            # step1-4: 重置索引
+            combined_res_wind_df.set_index("ts", inplace=True)
+            aligned_res_wind_df = combined_res_wind_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+            wd_standard_list = aligned_res_wind_df['wd'].tolist()
+            ws_standard_lis = aligned_res_wind_df['ws'].tolist()
 
             # step 2-2: 获取海洋站潮位要素实况
             query_surge_model_ = get_surge_instance_model(session, start_ts)
@@ -259,31 +280,53 @@ class StationBaseDao(BaseDao):
             combined_res_surge = session.execute(combined_surge_stmt).all()
             temp_ts_list: List[int] = []
             temp_surge_list: List[float] = []
-            for temp_surge_ in combined_res_surge:
-                """
-                    query_model_.c.surge,           0
-                    query_model_.c.station_code,    1
-                    query_model_.c.issue_ts         2
-                """
-                # fub_realdata_list: List[DistStationListMidModel] = []
-                temp_ts_: int = temp_surge_[2]
-                """时间戳"""
-                temp_surge_: float = temp_surge_[0]
-                """风速"""
-                temp_ts_list.append(temp_ts_)
-                temp_surge_list.append(temp_surge_)
 
+            """
+                [(Decimal('277.0000000000'), 'WFG', 1708387200), ]
+            """
+            list_res_ts: List[int] = [i[2] for i in combined_res_surge]
+            """基于combined_res_surge的 issue_ts 生成的时间戳集合"""
+            list_res_surge: List[float] = [i[0] for i in combined_res_surge]
+            """基于combined_res_surge的 surge 生成的增水集合"""
+            combined_res_df = pd.DataFrame({"ts": list_res_ts, 'surge': list_res_surge})
+            # 设置ts为index
+            combined_res_df.set_index("ts", inplace=True)
+            # 以生成的时间戳集合 list_ts 为基准，进行缺失值填充
+            # aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=np.NaN)
+            # aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=-999.9)
+            # TODO:[*] 24-06-19 若对于缺省值使用 np.NaN 或 None 填充，填充后为 nan ，序列化时会出现 ValueError: Out of range float values are not JSON compliant 错误
+            # 序列化出现的错误，建议不使用通过默认值进行填充
+            aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+            # list 结果为: ['nan', 'nan', Decimal('157.0000000000')
+            temp_surge_list = aligned_res_df['surge'].tolist()
+            """索引采用时间戳集合作为index(list_ts)，存在nan的情况"""
+
+            # for temp_surge_ in combined_res_surge:
+            #     """
+            #         query_model_.c.surge,           0
+            #         query_model_.c.station_code,    1
+            #         query_model_.c.issue_ts         2
+            #     """
+            #     # fub_realdata_list: List[DistStationListMidModel] = []
+            #     temp_ts_: int = temp_surge_[2]
+            #     """时间戳"""
+            #     temp_surge_: float = temp_surge_[0]
+            #     """风速"""
+            #     temp_ts_list.append(temp_ts_)
+            #     temp_surge_list.append(temp_surge_)
+
+            """根据 start_ts , end_ts 生成的时间戳"""
             temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
                                                                                 element_type=ElementTypeEnum.WD,
-                                                                                ts_list=temp_ts_list,
-                                                                                val_list=temp_wd_list)
+                                                                                ts_list=list_ts_standard,
+                                                                                val_list=wd_standard_list)
             temp_station_ws_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
                                                                                 element_type=ElementTypeEnum.WS,
-                                                                                ts_list=temp_ts_list,
-                                                                                val_list=temp_ws_list)
+                                                                                ts_list=list_ts_standard,
+                                                                                val_list=ws_standard_lis)
             temp_station_surge_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
                                                                                    element_type=ElementTypeEnum.WL,
-                                                                                   ts_list=temp_ts_list,
+                                                                                   ts_list=list_ts_standard,
                                                                                    val_list=temp_surge_list)
             temp_station_: DistStationListMidModel = DistStationListMidModel(code=temp_code,
                                                                              obs_type=ObservationTypeEnum.STATION,
