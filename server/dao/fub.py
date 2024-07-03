@@ -31,8 +31,10 @@ class FubDao(BaseDao):
 
     def get_fubs_realdata_list_backup(self, codes: List[str], start_ts: int, end_ts: int) -> List[DistFubListMidModel]:
         """
+            @deprecated
+            弃用
             根据传入的 codes 获取起止时间范围内的所有观测要素的集合(fub)
-            TODO:[*] 24-06-24 此部分逻辑应与 dao/station.py -> get_stations_realdata_list 一致
+            TODO:[-] 24-06-24 此部分逻辑已与 dao/station.py -> get_stations_realdata_list 一致
 
         :param codes:
         :param end_ts:
@@ -88,8 +90,11 @@ class FubDao(BaseDao):
     def get_fubs_realdata_list(self, codes: List[str], start_ts: int, end_ts: int) -> List[DistFubListMidModel]:
         """
             根据传入的 codes 获取起止时间范围内的所有观测要素的集合(fub)
-            TODO:[*] 24-06-24 此部分逻辑应与 dao/station.py -> get_stations_realdata_list 一致
-
+            TODO:[-] 24-06-24 此部分逻辑已与 dao/station.py -> get_stations_realdata_list 一致
+            具体步骤:
+             step1: 根据code通过group_contcat 拼接 issue_ts 与 val
+             step2: 根据 code 循环获取该code对应的所有 element_type 的观测数组，并通过 dataframe 按照指定时间戳数组为 index 进行拼接
+             step3: 遍历 dataframe 生成 list ，并创建 FubListMidModel
         :param codes:
         :param end_ts:
         :return:
@@ -119,7 +124,7 @@ class FubDao(BaseDao):
                     """)
             res = session.execute(sql_str)
 
-            # TODO:[*] 24-06-24 浮标数据量较小，不需要分表，不需要实现获取浮标orm instance的方法
+            # TODO:[-] 24-06-24 浮标数据量较小，不需要分表，不需要实现获取浮标orm instance的方法
             # fub_stmt = select(FubPerclockDataModel.element_type, FubPerclockDataModel.value,
             #                   FubPerclockDataModel.station_code, FubPerclockDataModel.issue_ts).where(
             #     FubPerclockDataModel.station_code == temp_code, FubPerclockDataModel.issue_ts <= end_ts,
@@ -128,19 +133,22 @@ class FubDao(BaseDao):
             # list_res_ts: List[int] = [i[3] for i in fub_res]
             # list_res_val: List[float] = [i[1] for i in fub_res]
             # res_df:pd.DataFrame=pd.DataFrame({'ts':list_res_ts,''})
-            # TODO:[*] 24-06-24 参考 dao/station.py -> get_stations_realdata_list 进行 dataframe 拼接的操作逻辑
+            # TODO:[-] 24-06-24 参考 dao/station.py -> get_stations_realdata_list 进行 dataframe 拼接的操作逻辑
 
             """
                 返回结果 station_code,issue_ts_list,val_list,element_type
             """
             res_df: pd.DataFrame = None
+            """需要拼接的原始 dataframe """
             for row in res:
                 temp_element = ElementTypeEnum(row.element_type)
 
                 temp_ts_str_list: List[str] = row.issue_ts_list.split(',')
                 temp_ts_list: List[int] = []
+                """当前时间戳数组"""
                 temp_val_str_list: List[str] = row.val_list.split(',')
                 temp_val_list: List[Union[float, int]] = []
+                """当前观测值数组"""
 
                 # TODO:[*] 24-04-23 此处可能出现的bug时缺少对时间戳的验证，可能会出现中断的问题
                 if len(temp_ts_str_list) == len(temp_val_str_list):
@@ -151,17 +159,15 @@ class FubDao(BaseDao):
                         if temp_val_str != '' or temp_val_str != ',':
                             temp_val_list.append(ast.literal_eval(temp_val_str))
                 name_element = row.element_type
-                # TODO:[*] 24-06-24 首次需要向 dataframe 中按列赋值
+                # TODO:[-] 24-06-24 首次需要向 dataframe 中按列赋值
                 if res_df is None:
                     res_df = pd.DataFrame({'ts': temp_ts_list})
                 res_df[name_element] = temp_val_list
-                # temp_fub_realdata: FubListMidModel = FubListMidModel(temp_code, temp_element, temp_ts_list,
-                #                                                      temp_val_list)
-                # fub_realdata_list.append(temp_fub_realdata)
                 pass
             # 循环结束后对dataframe设置对应索引
             res_df.set_index('ts', inplace=True)
             res_aligend_df = res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+            """填充了缺省值后的标准化后的 dataframe """
             # 循环元素数组获取标准化后的对应元素的集合
             for temp_element in elements:
                 temp_element_vals = res_aligend_df[temp_element.value].tolist()

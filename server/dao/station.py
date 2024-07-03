@@ -102,7 +102,7 @@ class StationBaseDao(BaseDao):
         # res = requests.get(target_url,
         #                    params={'station_code': code, 'start_dt': start_dt_str, 'end_dt': end_dt_str})
         # res_content: str = res.content.decode('utf-8')
-        # TODO:*] 23-11-17 加载指定站点的天文潮集合
+        # TODO:[*] 23-11-17 加载指定站点的天文潮集合
         res_content: str = get_remote_service('/station/astronomictide/list',
                                               params={'station_code': code, 'start_dt': start_dt_str,
                                                       'end_dt': end_dt_str})
@@ -164,26 +164,25 @@ class StationBaseDao(BaseDao):
         """
             + 24-05-29
             根据传入的 codes 获取起止时间范围内的所有观测要素的集合(海洋站)
-            TODO:[*] 24-06-04 后续问题需要加入可配置的观测实况选项，目前是加载 wd,ws,wl;后续会有其他观测数据
         :param codes:
         :param start_ts:
         :param end_ts:
         :return:
         """
         session = self.db.session
-        elements: List[ElementTypeEnum] = [ElementTypeEnum.WD, ElementTypeEnum.WS, ElementTypeEnum.WL]
         """要素枚举集合"""
         tab_name: str = WindPerclockDataModel.get_split_tab_name(start_ts)
         station_obserivation_list: List[DistStationListMidModel] = []
         """被查询海洋站的观测数据集合"""
-        # TODO:[*] 24-06-18 应加入基于起止时间的时间戳集合范围标准化（对于缺省值进行填充） 时间戳单位(s)
+        # TODO:[-] 24-06-18 加入基于起止时间的时间戳集合范围标准化（对于缺省值进行填充） 时间戳单位(s)
         list_ts_standard: List[int] = get_diff_timestamp_list(start_ts, end_ts)
+        """标准化后的时间戳数组"""
 
         for temp_code in codes:
             # step 2-1: 获取海洋站风要素实况
             # 获取指定站点的风要素(ws,wd)
 
-            # # TODO:[*] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
+            # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
             # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
             # 循环第二次时:
             # sqlalchemy.exc.InvalidRequestError: Table 'wind_perclock_data_realtime_2023' is already defined for this MetaData instance.
@@ -225,25 +224,6 @@ class StationBaseDao(BaseDao):
             temp_ws_list: List[float] = []
             """风要素-风速集合"""
 
-            # TODO:[*] 24-06-19 以下内容使用列表推导替代
-            # 根据查询结果生成风要素数据集
-            # for temp_wind_ in combined_res_wind:
-            #     """
-            #         query_model_.c.ws,              0
-            #         query_model_.c.wd,              1
-            #         query_model_.c.station_code,    2
-            #         query_model_.c.issue_ts         3
-            #     """
-            #     # fub_realdata_list: List[DistStationListMidModel] = []
-            #     temp_ts_: int = temp_wind_[3]
-            #     """时间戳"""
-            #     temp_wd_: int = temp_wind_[1]
-            #     """风向"""
-            #     temp_ws_: float = temp_wind_[0]
-            #     """风速"""
-            #     temp_ts_list.append(temp_ts_)
-            #     temp_wd_list.append(temp_wd_)
-            #     temp_ws_list.append(temp_ws_)
             # step1-2 :针对风要素生成对应的数组
             temp_wind_ts_list = [i[3] for i in combined_res_wind]
             """风要素对应的ts数组"""
@@ -254,9 +234,12 @@ class StationBaseDao(BaseDao):
             combined_res_wind_df = pd.DataFrame({"ts": temp_wind_ts_list, 'wd': temp_wd_list, 'ws': temp_ws_list})
             # step1-4: 重置索引
             combined_res_wind_df.set_index("ts", inplace=True)
+            # 以标准化后的时间戳数组为 index，并进行缺失值填充
             aligned_res_wind_df = combined_res_wind_df.reindex(list_ts_standard, fill_value=NAN_VAL)
             wd_standard_list = aligned_res_wind_df['wd'].tolist()
+            """标准化后的风向数组"""
             ws_standard_lis = aligned_res_wind_df['ws'].tolist()
+            """标准化后的风速数组"""
 
             # step 2-2: 获取海洋站潮位要素实况
             query_surge_model_ = get_surge_instance_model(session, start_ts)
@@ -266,6 +249,7 @@ class StationBaseDao(BaseDao):
                                                                     query_surge_model_.issue_ts <= end_ts).order_by(
                 query_surge_model_.issue_ts)
             combined_surge_stmt = surge_stmt_
+            """若涉及到跨表需要跨表查询,需要对stmt进行拼接操作"""
             if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
                 query_model_next_ = get_surge_instance_model(session, end_ts)
                 surge_stmt_next_ = select(query_surge_model_.surge, query_surge_model_.station_code,
@@ -275,11 +259,9 @@ class StationBaseDao(BaseDao):
                     query_surge_model_.issue_ts <= end_ts).order_by(
                     query_surge_model_.issue_ts)
                 combined_surge_stmt = union_all(surge_stmt_, surge_stmt_next_)
-            # TODO:[*] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
+            # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
             # eg: [(9.1, 11, 'BYQ', 1708347600), (8.7, 15, 'BYQ', 1708351200), ..]
             combined_res_surge = session.execute(combined_surge_stmt).all()
-            temp_ts_list: List[int] = []
-            temp_surge_list: List[float] = []
 
             """
                 [(Decimal('277.0000000000'), 'WFG', 1708387200), ]
@@ -291,29 +273,12 @@ class StationBaseDao(BaseDao):
             combined_res_df = pd.DataFrame({"ts": list_res_ts, 'surge': list_res_surge})
             # 设置ts为index
             combined_res_df.set_index("ts", inplace=True)
-            # 以生成的时间戳集合 list_ts 为基准，进行缺失值填充
-            # aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=np.NaN)
-            # aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=-999.9)
             # TODO:[*] 24-06-19 若对于缺省值使用 np.NaN 或 None 填充，填充后为 nan ，序列化时会出现 ValueError: Out of range float values are not JSON compliant 错误
             # 序列化出现的错误，建议不使用通过默认值进行填充
             aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
             # list 结果为: ['nan', 'nan', Decimal('157.0000000000')
             temp_surge_list = aligned_res_df['surge'].tolist()
             """索引采用时间戳集合作为index(list_ts)，存在nan的情况"""
-
-            # for temp_surge_ in combined_res_surge:
-            #     """
-            #         query_model_.c.surge,           0
-            #         query_model_.c.station_code,    1
-            #         query_model_.c.issue_ts         2
-            #     """
-            #     # fub_realdata_list: List[DistStationListMidModel] = []
-            #     temp_ts_: int = temp_surge_[2]
-            #     """时间戳"""
-            #     temp_surge_: float = temp_surge_[0]
-            #     """风速"""
-            #     temp_ts_list.append(temp_ts_)
-            #     temp_surge_list.append(temp_surge_)
 
             """根据 start_ts , end_ts 生成的时间戳"""
             temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
@@ -340,6 +305,7 @@ class StationBaseDao(BaseDao):
     def get_stations_realdata_list_backup(self, codes: List[str], start_ts: int, end_ts: int) -> List[
         DistStationListMidModel]:
         """
+            @deprecated
             + 24-05-30
             不使用 union_all 拼接——不使用此方法
         :param codes:
@@ -358,7 +324,7 @@ class StationBaseDao(BaseDao):
             # step 2-1: 获取海洋站风要素实况
             # 获取指定站点的风要素(ws,wd)
 
-            # # TODO:[*] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
+            # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
             # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
             query_model_ = get_wind_instance_model(session, start_ts)
             wind_stmt_ = select(query_model_.c.ws, query_model_.c.wd, query_model_.c.station_code,
@@ -372,7 +338,7 @@ class StationBaseDao(BaseDao):
                                                                          query_model_next_.issue_ts >= start_ts,
                                                                          query_model_next_.issue_ts <= end_ts).order_by(
                 query_model_next_.issue_ts)
-            # TODO:[*] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
+            # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
             combined_stmt = union_all(wind_stmt_, wind_stmt_next_)
             combined_res_wind = session.execute(combined_stmt).all()
             res_wind_next_ = []

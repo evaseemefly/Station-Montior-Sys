@@ -167,6 +167,6 @@ def get_diff_timestamp_list(start_ts: int, end_ts: int, step: int = 60 * 60) -> 
     :param step:     间隔（整点）
     :return:
     """
-    # TODO:[*] 24-06-18 使用range的stop并不包含stop，所以需要对stop+step操作
+    # TODO:[-] 24-06-18 使用range的stop并不包含stop，所以需要对stop+step操作
     ts_list = [i for i in range(start_ts, end_ts + step, step)]
     return ts_list

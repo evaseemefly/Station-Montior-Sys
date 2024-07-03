@@ -195,7 +195,7 @@ def get_wind_instance_model(session: Session, ts: int):
     """
     year = arrow.get(ts).date().year
     table_name = f'wind_perclock_data_realtime_{year}'
-    # TODO:[*] 24-05-30 多次动态创建相同表名出现的错误
+    # TODO:[-] 24-05-30 多次动态创建相同表名出现的错误
     inspector = inspect(session.bind)
     # cls = type(table_name, (AbsWindPerclockDataModel,), {
     #     '__tablename__': table_name, })
@@ -215,9 +215,12 @@ def get_surge_instance_model(session: Session, ts: int):
     """
     year = arrow.get(ts).date().year
     table_name = f'surge_perclock_data_realtime_{year}'
-    # TODO:[*] 24-05-30 多次动态创建相同表名出现的错误
+    # TODO:[-] 24-05-30 多次动态创建相同表名出现的错误
     inspector = inspect(session.bind)
     metadata = MetaData()
+    # TODO:[-] 24-07-02 autoload_with的意义?
+    # 此处 autoload_with 用来 db -> orm 进行映射，会根据数据库中实际存在的 table 表自动填充 model 对象的哥哥字段属性
+    # 此处创建了AbsSurgePerclockDataModel抽象类的orm对象，对应的表名为: 'surge_perclock_data_realtime_{year}'
     cls = type(table_name, (AbsSurgePerclockDataModel,), {
         '__tablename__': table_name, '__table__': Table(table_name, metadata, autoload_with=session.bind)})
     return cls

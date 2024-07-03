@@ -26,7 +26,7 @@ class StationWindDao(BaseDao):
 
         tab_name: str = WindPerclockDataModel.get_split_tab_name(start_ts)
 
-        # TODO:[*] 24-04-10 注意此处需要加入跨表的设计
+        # TODO:[-] 24-04-10 注意此处需要加入跨表的设计
         sql_str: text = text(f"""
                     SELECT station_code,
                         group_concat(issue_ts  order by issue_ts) as issue_ts_list,
@@ -39,7 +39,7 @@ class StationWindDao(BaseDao):
                 """)
         res = session.execute(sql_str)
 
-        # TODO:[*] 24-04-07 此处加入动态获取表名以及是否需要动态跨表查询
+        # TODO:[-] 24-04-07 此处加入动态获取表名以及是否需要动态跨表查询
         # is_need: bool = WindPerclockDataModel.check_needsplittab(start_ts, end_ts)
         """是否需要分表查询"""
 

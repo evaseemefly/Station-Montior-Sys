@@ -432,7 +432,7 @@ class StationSurgeExtremeDao(BaseDao):
             # 未传入结束时间，按照start_ts+24h赋值
             end_ts = start_ts + 24 * 60 * 60
 
-        # TODO:[*] 24-04-07 此处加入动态获取表名以及是否需要动态跨表查询
+        # TODO:[-] 24-04-07 此处加入动态获取表名以及是否需要动态跨表查询
         is_need: bool = SurgePerclockDataModel.check_needsplittab(start_ts, end_ts)
         """是否需要分表查询"""
         if is_need:
