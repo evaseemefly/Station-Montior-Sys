@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  wd-forecast-server:
+    build:
+      context: .
+      dockerfile: ./docker-file
+    image: py37:1.20
+    container_name: station-monitor-sys
+    working_dir: /opt/project
+    privileged: true
+    ports:
+      - "8088:8088"
+    command:
+      - /bin/bash
+    tty: true
+    volumes:
+      - /home/surge/proj/station_montior_sys/server:/opt/project
+
+
