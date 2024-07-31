@@ -7,10 +7,12 @@ import pathlib
 from typing import Optional, List, Dict, Any
 import arrow
 import pandas as pd
+from loguru import logger
 from sqlalchemy import distinct, select, update
 from datetime import datetime
 
 from common.default import DEFAULT_SURGE, DEFAULT_WINDSPEED, DEFAULT_DIR
+from common.exceptions import ReadataStoreError
 from core.files import IFile, IStationFile
 from mid_models.elements import WindExtremum, FubElementMidModel, FubMidModel
 from util.decorators import decorator_timer_consuming
@@ -58,9 +60,13 @@ class SurgeStore(IStore):
         extremum_list: List[dict] = kwargs.get('extremum_list')
         """站点极值集合"""
 
+        # TODO:[*] 24-07-29 加入了写入db异常处理
         # step2: 根据实况 与 极值 集合写入db
-        self._loop_realdata_2_db(realdata_list, ts)
-        self._loop_extremum_2_db(extremum_list, ts)
+        try:
+            self._loop_realdata_2_db(realdata_list, ts)
+            self._loop_extremum_2_db(extremum_list, ts)
+        except Exception:
+            raise ReadataStoreError()
 
     def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int):
         """
@@ -111,6 +117,8 @@ class SurgeStore(IStore):
                 self.session.add(temp_model)
         self.session.commit()
         self.session.close()
+        logger.info(
+            f'[-]写入:code:{station_code},ts:{ts},站点数据成功')
         pass
 
     def _loop_extremum_2_db(self, extremum_list: List[dict], ts: int):
@@ -395,8 +403,12 @@ class PerclockFubStore(IStore):
         code: str = kwargs.get('code')
         realdata: FubMidModel = kwargs.get('realdata_list')
         fub_code: str = realdata.code
+
         realdata_list: List[FubElementMidModel] = realdata.list_vals
-        self._loop_realdata_2db(realdata_list, ts, fub_code)
+        try:
+            self._loop_realdata_2db(realdata_list, ts, fub_code)
+        except Exception:
+            raise ReadataStoreError()
 
     def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str):
         """

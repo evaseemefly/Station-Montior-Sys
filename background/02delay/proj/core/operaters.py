@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any, Tuple
 import arrow
 import pandas as pd
 
-from common.exceptions import FtpDownLoadError
+from common.exceptions import FtpDownLoadError, FileReadError
 from core.files import IFile, IStationFile
 from core.readers import SurgeReader, WindReader, FubReader
 from core.storers import SurgeStore, PerclockWindStore, PerclockFubStore
@@ -49,10 +49,17 @@ class SurgeOperate(IOperater):
         if self.file.download():
             # step2: 读取文件(实际不需要)
             surge_reader = SurgeReader(self.file)
-            realdata_list: List[dict] = surge_reader.realdata_list
+            realdata_list: List[dict] = []
             """站点实况集合"""
-            extremum_list: List[dict] = surge_reader.extremum_list
+            extremum_list: List[dict] = []
             """站点极值集合"""
+            # TODO:[*] 24-07-29 加入了对于reader 的异常处理
+            try:
+                realdata_list = surge_reader.realdata_list
+
+                extremum_list = surge_reader.extremum_list
+            except  Exception:
+                raise FileReadError()
             # step3: 写入数据库持久化保存(reader在此步骤中完成)
             SurgeStore(self.file).to_db(realdata_list=realdata_list, extremum_list=extremum_list, ts=ts)
         else:
@@ -84,6 +91,7 @@ class SurgeOperateBackup(IOperater):
         else:
             # TODO:[-] 24-01-19 抛出异常
             raise FtpDownLoadError()
+
 
 #
 class FubOperate(IOperater):

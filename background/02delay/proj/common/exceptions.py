@@ -17,6 +17,13 @@ class FileReadError(Exception):
     pass
 
 
+class ReadataStoreError(Exception):
+    """
+        实况写入数据库异常
+    """
+    pass
+
+
 class FileFormatError(Exception):
     """
         文件格式错误

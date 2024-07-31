@@ -5,6 +5,8 @@ import arrow
 import ftplib
 import os
 
+from loguru import logger
+
 
 class FtpClient:
     """
@@ -67,6 +69,7 @@ class FtpClient:
         # 改为 linux 系统路径格式后仍然出错
         # ftplib.error_temp: 451 No mapping for the Unicode character exists in the target multi-byte code page.
         # remote_path = r'/home/nmefc/share/test/ObsData'
+        # TODO:[*] 24-07-16 测试错误 ftplib.error_perm: 550 Failed to change directory.
         self.ftp.cwd(remote_path)
         files_list: List[str] = self.ftp.nlst()
         # TODO:[-] 23-09-26 修改 ftp 缓冲区为 250KB
@@ -74,21 +77,26 @@ class FtpClient:
         if file_name in files_list:
             now_str: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
             print(f'')
-            print(f'{now_str}[*]下载指定文件:{file_name}ing')
+            logger.info(
+                f'[-]下载指定文件:{file_name}ing')
             self.ftp.retrbinary('RETR ' + file_name, file_handler.write, BUFSIZE)
             is_ok = True
             load_over_time: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
-            print(f'{load_over_time}[-]下载指定文件:{file_name}成功')
+            logger.info(
+                f'[-]下载指定文件:{file_name.lower()}成功')
             file_handler.close()
         # TODO:[*] 24-02-27 此处缺少对于小写的处理
         elif file_name.lower() in files_list:
             now_str: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
-            print(f'')
-            print(f'{now_str}[*]下载指定文件:{file_name}ing')
+            # print(f'')
+            # print(f'{now_str}[*]下载指定文件:{file_name}ing')
+            logger.info(
+                f'[-]下载指定文件:{file_name}ing')
             self.ftp.retrbinary('RETR ' + file_name.lower(), file_handler.write, BUFSIZE)
             is_ok = True
             load_over_time: str = arrow.Arrow.utcnow().format('YYYY-MM-DD|HH:mm:ss')
-            print(f'{load_over_time}[-]下载指定文件:{file_name.lower()}成功')
+            logger.info(
+                f'[-]下载指定文件:{file_name.lower()}成功')
             file_handler.close()
         return is_ok
 

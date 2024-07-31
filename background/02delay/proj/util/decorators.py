@@ -26,7 +26,7 @@ def decorator_timer_consuming(func: Optional[Callable] = None):
         now: float = datetime.datetime.now().timestamp()
         timer_consuming: float = now - old
         timer_consuming_str: str = '%.2f' % timer_consuming
-        logger.debug(f'now:{dt_str}|func:{func}|consuming time:{timer_consuming_str}')
+        logger.debug(f'func:{func}|consuming time:{timer_consuming_str}')
         return res
 
     return wrapper

@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from typing import Optional, List, Dict, Any, Tuple
 import arrow
 import pandas as pd
+from loguru import logger
 
 from common.default import DEFAULT_VAL_LIST, DEFAULT_CODE, DEFAULT_DT_STR
 from common.exceptions import FileReadError, FileFormatError
@@ -239,6 +240,7 @@ class SurgeReader(IReader):
                         # 设置起始时间(utc)
                         # xxxx 12:00(utc)
                         # 读取时间有误，应为 24-8=16
+                        # TODO:[*] 24-07-30 注意此处对应的应为北京时间!
                         dt_start_utc: arrow.Arrow = arrow.get(dt_utc_str, 'YYYYMMDDHH').shift(days=-1)
                         # 站点起始时间为昨天的20点(local)
                         series_surge: pd.Series = data.iloc[0][1:25]
@@ -432,7 +434,9 @@ class SurgeReader(IReader):
                         temp_dt_format: str = f'{dt_start_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
                     elif int(temp_time_str) >= 0 and int(temp_time_str) <= 1959:
                         temp_dt_format: str = f'{dt_start_local.shift(days=1).format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
-
+                    # TODO:[*] 24-07-30 加入对于 9999 缺省时间值的处理
+                    elif int(temp_time_str) == 9999:
+                        continue
                     # 转换为utc
                     temp_dt_utc: arrow.Arrow = arrow.get(temp_dt_format, "YYYYMMDDhhmm").shift(hours=-8)
                     temp_ts: int = temp_dt_utc.int_timestamp
@@ -440,7 +444,7 @@ class SurgeReader(IReader):
                     temp_dict: dict = {'ts': temp_ts, 'surge': val}
                     list_dict.append(temp_dict)
             except Exception as ex:
-                logging.error(f'读取极值集合出错!')
+                logger.error(f'[!]读取:{temp_dt_format}时刻极值集合出错!')
         return list_dict
 
 
@@ -472,7 +476,7 @@ class FubReader(IReader):
                     fub_mid_model: Optional[FubMidModel] = None
                     fub_code: str = DEFAULT_CODE
                     dt_str: str = DEFAULT_DT_STR
-                    """当前浮标文件需要获取的要素mid model集合"""
+                    """当前时间字符串"""
 
                     if fub_rpt is not None:
                         # 获取浮标站代号与当前时间

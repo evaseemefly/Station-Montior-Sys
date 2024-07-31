@@ -123,8 +123,9 @@ def get_station_start_ts(ts: int) -> int:
         stand_start_ts = stand_dt.int_timestamp
     else:
         # 当日
-        stand_date_format: str = current_arrow.format('YYYY-MM-DD')
-        stand_dt: arrow.Arrow = arrow.get(f'{stand_date_format}12')
+        stand_date_format: str = current_arrow.format('YYYYMMDD')
+        # TODO:[*] 24-07-17 ERROR: arrow.parser.ParserError: Could not match input '2024-07-0112'
+        stand_dt: arrow.Arrow = arrow.get(f'{stand_date_format}12', 'YYYYMMDDHH')
         stand_start_ts = stand_dt.int_timestamp
     return stand_start_ts
 
