@@ -70,10 +70,41 @@ class StationRealdataDownloadCase(ICase):
             # StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('SHW', '09711', '汕尾', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('HZO', '09740', '惠州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND])
+            # part1: 北海
+            # StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('CFD', '03126', '曹妃甸', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('CST', '04133', '成山头', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '孤东', [ElementTypeEnum.SURGE]),
+            # --- 24-08-01
+            # StationElementMidModel('GUD', '04166', '东港', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '小长山', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '皮口', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('LHT', '01146', '老虎滩', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('GUD', '04166', '长兴岛', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('GUD', '04166', '营口', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '锦州', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '盘锦', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('HLD', '01120', '葫芦岛', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('GUD', '04166', '芷锚湾', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '京唐港', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '唐山三岛', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '黄骅', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '滨州港', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '黄河海港', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '东营港', [ElementTypeEnum.SURGE]),
+            # StationElementMidModel('GUD', '04166', '垦东', [ElementTypeEnum.SURGE]),
+            # ----
             # StationElementMidModel('QHD', '03122', '秦皇岛', [ElementTypeEnum.WIND]),
             # StationElementMidModel('RZH', '04144', '日照', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.WIND]),
-            # StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.WIND]),
+            # StationElementMidModel('TGU', '02123', '塘沽', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+            # StationElementMidModel('WFG', '04163', '潍坊', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('ZFD', '04152', '芝罘岛', [ElementTypeEnum.WIND]),
             # StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.WIND]),
             # StationElementMidModel('HZO', '04130', '北隍城', [ElementTypeEnum.WIND]),
@@ -87,11 +118,84 @@ class StationRealdataDownloadCase(ICase):
             # StationElementMidModel('CGM', '08444', '长门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
             # StationElementMidModel('SHA', '08430', '三沙', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('RAS', '07459', '瑞安S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-            # StationElementMidModel('AJS', '07457', '鳌江S', [ElementTypeEnum.SURGE]),
-            StationElementMidModel('WZS', '07450', '温州', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('RAS', '70600800', '瑞安S', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('AJS', '70610600', '鳌江S', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('WZS', '70503400', '温州S', [ElementTypeEnum.SURGE]),
             # StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
         ]
+        ftp = self.ftp_client
+        ts = kwargs.get('ts')
+        # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)
+        stand_start_ts: int = get_station_start_ts(ts)
+        """世界时"""
+        local_root_path: str = kwargs.get('local_root_path')
+        remote_root_path: str = kwargs.get('remote_root_path')
+
+        # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
+        for val_station in list_station:
+            # logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
+            for val_element in val_station.elements:
+                logger.info(
+                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}')
+                # TODO"[*] 24-07-29 在此处加入异常处理
+                try:
+                    # step2-1:根据工厂方法获取当前要素对应的文件
+                    cls = factory_get_station_file(val_element)
+                    """ 文件类"""
+                    # TODO:[*] 24-07-24 可将 file 实例同意push至数组中，并加入判断是否存在指定数组的操作，
+                    file_instance: IStationFile = cls(ftp, local_root_path, val_element, val_station.station_code,
+                                                      val_station.station_name,
+                                                      val_station.station_num, stand_start_ts,
+                                                      remote_root_path)
+                    """ 文件类实例化对象"""
+                    # step2-2:文件下载
+                    # step2-3:文件读取
+                    # step2-4:文件写入db
+                    # 以上均在操作类中实现
+                    cls_operate = factory_get_operater(val_element)
+                    """操作类"""
+                    instance_operate: IOperater = cls_operate(file_instance)
+                    """ 操作类实例化对象"""
+                    instance_operate.todo(ts=stand_start_ts)
+                # TODO:[*] 24-07-29 加入异常集
+                except FtpDownLoadError as ftpEx:
+                    logger.info(
+                        f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}出现:下载异常')
+                except FileReadError as readerEx:
+                    logger.info(
+                        f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}出现:数据读取异常')
+                except ReadataStoreError as storeEx:
+                    logger.info(
+                        f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}出现:数据写入db异常')
+                except Exception as ex:
+                    logger.info(
+                        f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}出现:未知异常——f{ex.args}')
+
+            pass
+        pass
+
+
+class SLStationRealdataDownloadCase(ICase):
+    """
+        TODO:[-] 24-08-02 加入的处理水利部站点的case
+    """
+
+    # @decorator_exception_logging
+    def todo(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return:
+        """
+        # step1: 根据当前的触发时间，以及海洋站集合获取对应的站点集合|每个站点对应的要素
+        """
+            {'code':[要素a,要素b],,,}
+        """
+        # TODO:[*] 24-02-27 注意例如站点不存在某个要素的整点数据，例如潮位数据WL 莆田不存在，则会报错
+        list_station: List[StationElementMidModel] = [
+            StationElementMidModel('RAS', '70600800', '瑞安S', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('AJS', '70610600', '鳌江S', [ElementTypeEnum.SURGE]),
+            StationElementMidModel('WZS', '70503400', '温州S', [ElementTypeEnum.SURGE]), ]
         ftp = self.ftp_client
         ts = kwargs.get('ts')
         # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)

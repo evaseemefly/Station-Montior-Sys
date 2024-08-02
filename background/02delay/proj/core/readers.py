@@ -14,13 +14,14 @@ import pandas as pd
 from loguru import logger
 
 from common.default import DEFAULT_VAL_LIST, DEFAULT_CODE, DEFAULT_DT_STR
+from common.dicts import d85_dicts
 from common.exceptions import FileReadError, FileFormatError
-from core.files import IFile
+from core.files import IFile, IStationFile
 from mid_models.elements import WindExtremum, FubElementMidModel, FubMidModel
 from util.getters import factory_get_fubelements_val
 from util.ftp import FtpClient
 from util.common import get_store_relative_path
-from common.enums import ElementTypeEnum
+from common.enums import ElementTypeEnum, RegionGroupEnum
 
 
 class IReader(ABC):
@@ -28,7 +29,7 @@ class IReader(ABC):
         阅读器接口
     """
 
-    def __init__(self, file: IFile):
+    def __init__(self, file: IStationFile):
         self.file = file
         """被读取的文件"""
 
@@ -50,6 +51,8 @@ class WindReader(IReader):
     def __init__(self, file: IFile):
 
         super().__init__(file)
+        # self.code = code
+        """站点code"""
         self.list_wind: List[dict] = []
         """风要素实况集合 :List[{'index': index, 'ts': temp_ts, 'wd': temp_wd, 'ws': temp_ws}]"""
         self.extremum: WindExtremum = None
@@ -202,7 +205,7 @@ class SurgeReader(IReader):
         """站点每日极值集合"""
         return list_realdata_surge, list_extremum_surge
 
-    def read_file(self, full_path: str) -> Optional[dict]:
+    def read_file(self, full_path: str, **kwargs) -> Optional[dict]:
         """
             获取 00-23 H 的实况潮位，以及该日的所有极值
         :param full_path:
@@ -213,6 +216,15 @@ class SurgeReader(IReader):
         """实况潮位集合 {ts:int,surge:float}"""
         list_surge_extremum: List[dict] = []
         """潮位极值集合 {ts:int,surge:float}"""
+        # TODO:[*] 24-08-02 加入是否为水利部站点的判断
+        region_group: RegionGroupEnum = self.file.get_group_region()
+        """归属"""
+        code: str = self.file.station_code
+        d85: int = 0
+        """站点code"""
+        if region_group == RegionGroupEnum.SHUILI:
+            d85: int = d85_dicts.get(code)
+
         # step-1: 判断指定文件是否存在
         if pathlib.Path(full_path).exists():
             # step-2: 以 gbk 格式打开指定文件
@@ -242,11 +254,14 @@ class SurgeReader(IReader):
                         # 读取时间有误，应为 24-8=16
                         # TODO:[*] 24-07-30 注意此处对应的应为北京时间!
                         dt_start_utc: arrow.Arrow = arrow.get(dt_utc_str, 'YYYYMMDDHH').shift(days=-1)
+                        # TODO:[*] 24-08-02 此处加入对于是否为水利部站点的处理
                         # 站点起始时间为昨天的20点(local)
-                        series_surge: pd.Series = data.iloc[0][1:25]
+                        series_surge: pd.Series = data.iloc[0][1:25] if region_group == RegionGroupEnum.HAIYANG else \
+                            data.iloc[0][1:25] + d85
                         """获取当日实况情况(series)"""
                         list_surge_realdata: List[dict] = self._read_realdata(dt_start_utc, series_surge)
                         """站点实况集合"""
+                        # TODO:[*] 24-08-02 注意此处对于实况的处理不应该直接进行+d85的操作，此部分暂时不修改
                         series_extremum: pd.Series = data.iloc[0][25:]
                         """获取当日极值情况(series)"""
                         list_surge_extremum: List[dict] = self._read_extremum(dt_start_utc, series_extremum)
@@ -359,7 +374,7 @@ class SurgeReader(IReader):
             raise FileExistsError(f"{full_path}文件不存在")
         return res_dict
 
-    def _read_realdata(self, dt: arrow.Arrow, series_list: pd.Series) -> List[dict]:
+    def _read_realdata(self, dt: arrow.Arrow, series_list: pd.Series, **kwargs) -> List[dict]:
         """
             读取实况 serise
         @param dt: 起始的世界时
@@ -380,7 +395,7 @@ class SurgeReader(IReader):
                 logging.error(f'读取实况集合出错')
         return list_dict
 
-    def _read_extremum(self, dt: arrow.Arrow, series_list: pd.Series) -> List[dict]:
+    def _read_extremum(self, dt: arrow.Arrow, series_list: pd.Series, **kwargs) -> List[dict]:
         """
             读取极值 series
             TODO:[*] 24-02-29 读取极值会将时间往前推一天
@@ -428,23 +443,25 @@ class SurgeReader(IReader):
                     # TODO:[*] 24-02-29 注意此处有一个隐藏的问题:由于整点报文为 20H -> 次日19H(localtime),此处需要将 utc -> localtime
                     temp_dt_format: str = ''
                     """当前极值对应的时间字符串 YYYYMMDDHH"""
-
-                    # TODO:[*] 24-02-29 localtime: [20H,23H][2000,2359] 直接拼接即可; localtime:[ 0000,1959] day+1 再拼接
-                    if int(temp_time_str) >= 2000 and int(temp_time_str) <= 2359:
-                        temp_dt_format: str = f'{dt_start_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
-                    elif int(temp_time_str) >= 0 and int(temp_time_str) <= 1959:
-                        temp_dt_format: str = f'{dt_start_local.shift(days=1).format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
                     # TODO:[*] 24-07-30 加入对于 9999 缺省时间值的处理
-                    elif int(temp_time_str) == 9999:
+                    if int(temp_time_str) == 9999:
                         continue
+                    # TODO:[*] 24-07-31 注意此处只需要针对当前本地日期拼接该 时间字符串即可获取本地时间(local)->utc
+                    temp_dt_format_local: str = f'{dt_start_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+                    # TODO:[-] 24-02-29 localtime: [20H,23H][2000,2359] 直接拼接即可; localtime:[ 0000,1959] day+1 再拼接
+                    # if int(temp_time_str) >= 2000 and int(temp_time_str) <= 2359:
+                    #     temp_dt_format: str = f'{dt_start_local.format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+                    # elif int(temp_time_str) >= 0 and int(temp_time_str) <= 1959:
+                    #     temp_dt_format: str = f'{dt_start_local.shift(days=1).format("YYYYMMDD")}{temp_time_str.rjust(4, "0")}'
+
                     # 转换为utc
-                    temp_dt_utc: arrow.Arrow = arrow.get(temp_dt_format, "YYYYMMDDhhmm").shift(hours=-8)
+                    temp_dt_utc: arrow.Arrow = arrow.get(temp_dt_format_local, "YYYYMMDDhhmm").shift(hours=-8)
                     temp_ts: int = temp_dt_utc.int_timestamp
                     """对应的极值的时间戳"""
                     temp_dict: dict = {'ts': temp_ts, 'surge': val}
                     list_dict.append(temp_dict)
             except Exception as ex:
-                logger.error(f'[!]读取:{temp_dt_format}时刻极值集合出错!')
+                logger.error(f'[!]读取:localtime:{temp_dt_format_local}时刻极值集合出错!')
         return list_dict
 
 

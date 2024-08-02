@@ -41,3 +41,15 @@ class ExtremumType(Enum):
 
     WIND_MAX = 802
     """风速最大值"""
+
+
+@unique
+class RegionGroupEnum(Enum):
+    """
+        站点归属(海洋局|水利部)
+    """
+    HAIYANG = 1001
+    """海洋局"""
+
+    SHUILI = 1002
+    """水利部"""

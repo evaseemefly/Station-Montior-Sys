@@ -59,8 +59,8 @@ def main():
     # delay_task()
     # timer_downsa`1    load_station_realdata()
     # timer_download_fub_realdata()
-    start_dt: arrow.Arrow = arrow.Arrow(2024, 7, 25, 0, 0)
-    end_dt: arrow.Arrow = arrow.Arrow(2024, 7, 27, 0, 0)
+    start_dt: arrow.Arrow = arrow.Arrow(2024, 7, 1, 0, 0)
+    end_dt: arrow.Arrow = arrow.Arrow(2024, 8, 2, 0, 0)
     # task_downloads_fub_byrange(start_dt.int_timestamp, end_dt.int_timestamp, 1)
     task_downloads_station_byrange(start_dt.int_timestamp, end_dt.int_timestamp)
 

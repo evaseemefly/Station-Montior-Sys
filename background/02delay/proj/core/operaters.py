@@ -8,7 +8,8 @@ from typing import Optional, List, Dict, Any, Tuple
 import arrow
 import pandas as pd
 
-from common.exceptions import FtpDownLoadError, FileReadError
+from common.enums import RegionGroupEnum
+from common.exceptions import FtpDownLoadError, FileReadError, FileFormatError
 from core.files import IFile, IStationFile
 from core.readers import SurgeReader, WindReader, FubReader
 from core.storers import SurgeStore, PerclockWindStore, PerclockFubStore

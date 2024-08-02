@@ -8,10 +8,11 @@ from typing import Optional, List, Dict
 
 import arrow
 
+from common.exceptions import FileFormatError
 from util.ftp import FtpClient
 from util.common import get_store_relative_path, get_filestamp, get_calendarday_filestamp, \
     get_store_relative_exclude_day, get_fulltime_stamp, get_local_fulltime_stamp
-from common.enums import ElementTypeEnum
+from common.enums import ElementTypeEnum, RegionGroupEnum
 from util.decorators import decorator_timer_consuming, decorator_exception_logging
 
 
@@ -83,6 +84,38 @@ class IFile(ABC):
         is_ok = self.ftp_client.down_load_file_bycwd(self.local_full_path, self.get_remote_path(),
                                                      self.get_file_name())
         return is_ok
+
+    def name_ext(self) -> str:
+        """
+               TODO:[*] 24-08-02 加入是否为水利部站点的判断——根据后缀长度判断
+               eg: 水利部: wl0726_dat.70503400 —— 后缀 8 位
+
+                   海洋局: AT0703.01111        —— 后缀 5位
+                          202401010000MF02004.dat —— 后缀3位
+        """
+        name_ext = ''
+        """后缀名"""
+        tempNameSplit: List[str] = self.get_file_name().split('.')
+        """根据 '.' 分割后的字符串数组"""
+        if len(tempNameSplit) > 0:
+            name_ext = tempNameSplit[len(tempNameSplit) - 1]
+            """文件名后缀"""
+            return name_ext
+        else:
+            raise FileFormatError()
+
+    def get_group_region(self) -> RegionGroupEnum:
+        """
+            TODO:[*] 24-08-02 获取该file对应的归属(海洋局|水利部)
+        @return:
+        """
+        region_group = RegionGroupEnum.HAIYANG
+        name_ext = self.name_ext()
+        if len(name_ext) == 5 or len(name_ext) == 3:
+            region_group = RegionGroupEnum.HAIYANG
+        elif len(name_ext) == 8:
+            region_group = RegionGroupEnum.SHUILI
+        return region_group
 
 
 class IStationFile(IFile):
