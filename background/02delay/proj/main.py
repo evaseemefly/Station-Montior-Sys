@@ -5,7 +5,7 @@ from loguru import logger
 import arrow
 from conf.settings import LOG_DIR, LOG_FILE
 from tasks.cases import delay_task, timer_download_station_realdata, timer_download_fub_realdata, \
-    task_downloads_fub_byrange, task_downloads_station_byrange
+    task_downloads_fub_byrange, task_downloads_station_byrange, task_downloads_slb_byrange
 
 
 def init_logging():
@@ -62,7 +62,8 @@ def main():
     start_dt: arrow.Arrow = arrow.Arrow(2024, 7, 1, 0, 0)
     end_dt: arrow.Arrow = arrow.Arrow(2024, 8, 2, 0, 0)
     # task_downloads_fub_byrange(start_dt.int_timestamp, end_dt.int_timestamp, 1)
-    task_downloads_station_byrange(start_dt.int_timestamp, end_dt.int_timestamp)
+    # task_downloads_station_byrange(start_dt.int_timestamp, end_dt.int_timestamp)
+    task_downloads_slb_byrange(start_dt.int_timestamp, end_dt.int_timestamp)
 
 
 if __name__ == '__main__':

@@ -30,6 +30,7 @@ DOWNLOAD_OPTIONS = {
     'remote_root_path': r'X:',
     'remote_station_root_path': r'/home/nmefc/share/test/ObsData/STATION',
     'remote_fub_root_path': r'',
+    'remote_slb_root_path': r'/home/nmefc/share/test/ObsData/STATION',
     # 线上环境
     # 'remote_root_path': r'/home/nmefc/data_remote/71_upload2surge_wd_surge/2023:',
     # 本地下载根目录
