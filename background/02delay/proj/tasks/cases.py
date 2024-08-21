@@ -326,7 +326,7 @@ def timer_download_station_realdata():
     # v2:不使用全路径，需改为 相对路径 /home/nmefc/share/test/ObsData/' -> test/ObsData/
     # remote_root_path: str = r'test/ObsData/'
     # v3: 修改为使用远端绝对路径
-    remote_root_path: str = DOWNLOAD_OPTIONS.get('remote_fub_root_path')
+    remote_root_path: str = DOWNLOAD_OPTIONS.get('remote_station_root_path')
 
     """当前时间的时间戳"""
     logger.info(f"触发timer_download_station_realdata|ts:{now_ts}")
@@ -476,7 +476,7 @@ def task_downloads_slb_byrange(start_ts: int, end_ts: int, split_hours=1):
         case.todo(ts=temp_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
 
 
-def delay_task():
+def delay_task(start_ts: int, end_ts: int):
     """
         执行定时延时作业:
             定时下载站点数据
@@ -489,7 +489,8 @@ def delay_task():
     # 十分钟/次 的定时下载站点任务
     # scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
     # TODO:[-] 24-07-29 执行定时下载任务
-    scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
-    scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
+    scheduler.add_job(timer_download_station_realdata, 'interval', minutes=30)
+    # TODO:[*] 24-08-19
+    # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
     # # 启动调度任务
     scheduler.start()

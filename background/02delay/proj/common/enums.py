@@ -53,3 +53,22 @@ class RegionGroupEnum(Enum):
 
     SHUILI = 1002
     """水利部"""
+
+
+@unique
+class RunTypeEnmum(Enum):
+    """
+        执行 task 类型
+    """
+
+    DELATY_TASK = 101
+    """延时任务"""
+    #
+    DATAENTRY_STATION_RANGE = 102
+    """录入海洋站(时间段)实况"""
+
+    DATAENTRY_SLB_RANGE = 103
+    """录入水利部(时间段)实况"""
+
+    DATAENTRY_FUB_RANGE = 104
+    """录入浮标(时间段)实况"""
