@@ -29,6 +29,10 @@ from util.qc import is_standard_ws, DEFAULT_VAL_LIST
 
 class IStore(ABC):
 
+    def __init__(self):
+        self.session = DbFactory().Session
+        """数据库session"""
+
     @abstractmethod
     def to_db(self, **kwargs):
         """
@@ -40,10 +44,9 @@ class IStore(ABC):
 
 class SurgeStore(IStore):
     def __init__(self, file: IStationFile):
+        super().__init__()
         self.file = file
         """当前要素文件"""
-        self.session = DbFactory().Session
-        """数据库session"""
 
     @decorator_timer_consuming
     def to_db(self, **kwargs):
@@ -66,6 +69,8 @@ class SurgeStore(IStore):
             self._loop_realdata_2_db(realdata_list, ts)
             self._loop_extremum_2_db(extremum_list, ts)
         except Exception:
+            self.session.commit()
+            self.session.remove()
             raise ReadataStoreError()
 
     def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int):
@@ -116,7 +121,7 @@ class SurgeStore(IStore):
                                                     gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 self.session.add(temp_model)
         self.session.commit()
-        self.session.close()
+        self.session.remove()
         logger.info(
             f'[-]写入:code:{station_code},ts:{ts},站点数据成功')
         pass
@@ -160,7 +165,7 @@ class SurgeStore(IStore):
                                                             gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 self.session.add(temp_model)
         self.session.commit()
-        self.session.close()
+        self.session.remove()
         pass
 
     def check_tab(self, dt_arrow: arrow):
@@ -201,8 +206,13 @@ class PerclockWindStore(IStore):
         max: WindExtremum = kwargs.get('max')
         extremum: WindExtremum = kwargs.get('extremum')
         # 分别将文件中的逐时风及极值风写入db
-        self._loop_realdata_2_db(realdata_list, ts)
-        self._loop_extremum_2_db(extremum, max, ts)
+        try:
+            self._loop_realdata_2_db(realdata_list, ts)
+            self._loop_extremum_2_db(extremum, max, ts)
+        except Exception:
+            self.session.commit()
+            self.session.remove()
+            raise ReadataStoreError()
         pass
 
     def check_tab(self, dt_arrow: arrow):
@@ -273,7 +283,7 @@ class PerclockWindStore(IStore):
                                                    gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 self.session.add(temp_model)
         self.session.commit()
-        self.session.close()
+        self.session.remove()
         pass
 
     def _loop_extremum_2_db(self, extremum: WindExtremum, max: WindExtremum, ts: int):
@@ -378,7 +388,7 @@ class PerclockWindStore(IStore):
                 self.session.add(temp_extremum_model)
                 pass
         self.session.commit()
-        self.session.close()
+        self.session.remove()
         pass
 
 
@@ -408,6 +418,8 @@ class PerclockFubStore(IStore):
         try:
             self._loop_realdata_2db(realdata_list, ts, fub_code)
         except Exception:
+            self.session.commit()
+            self.session.remove()
             raise ReadataStoreError()
 
     def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str):
@@ -451,5 +463,5 @@ class PerclockFubStore(IStore):
                 pass
 
         self.session.commit()
-        self.session.close()
+        self.session.remove()
         pass

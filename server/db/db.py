@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
 from conf.db_config import DBConfig
@@ -60,3 +62,21 @@ class DBFactory:
         # 优点:支持线程安全,为每个线程都创建一个session
         # scoped_session 是一个支持多线程且线程安全的session
         return scoped_session(session_factory)
+
+
+@contextmanager
+def session_scope():
+    """
+        TODO:[-] 24-08-26 基于事物的Session会话管理
+    """
+
+    session = DBFactory().session
+    """提供一个事务范围的会话"""
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

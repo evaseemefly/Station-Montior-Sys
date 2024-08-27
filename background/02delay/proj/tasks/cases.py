@@ -19,7 +19,7 @@ from core.files import IFile, IStationFile
 from core.operaters import IOperater
 
 from mid_models.stations import StationElementMidModel
-from util.common import get_station_start_ts
+from util.common import get_station_start_ts, get_fub_start_ts
 from util.factory import factory_get_station_file, factory_get_operater
 from util.ftp import FtpClient
 from util.decorators import decorator_timer_consuming, decorator_exception_logging
@@ -260,19 +260,19 @@ class FubRealdataDownloadCase(ICase):
         list_station: List[StationElementMidModel] = LIST_FUBS
         ftp = self.ftp_client
         ts = kwargs.get('ts')
-        # TODO:[*] 24-04-19 浮标case不需要对ts进行标准化，此处后续需要修改
+        stand_start_ts = ts
+        # TODO:[-] 24-08-21 浮标case根据 当前时间->整点时刻->时间戳
         # stand_start_ts: int = get_station_start_ts(ts)
-        stand_start_ts: int = ts
+        # stand_start_ts: int = get_fub_start_ts(ts)
         """世界时"""
         local_root_path: str = kwargs.get('local_root_path')
         remote_root_path: str = kwargs.get('remote_root_path')
+
         # TODO:[*] 24-07-29 处理浮标数据只需要根据浮标中心统一处理即可(不需要再按要素进行分类处理——下载不同的要素对应的文件)
         val_element: ElementTypeEnum = ElementTypeEnum.FUB
         # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
         for val_station in list_station:
             logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
-            logger.info(
-                f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
             try:
                 # step2-1:根据工厂方法获取当前要素对应的文件
                 cls = factory_get_station_file(val_element)
@@ -289,6 +289,10 @@ class FubRealdataDownloadCase(ICase):
                 cls_operate = factory_get_operater(val_element)
                 """操作类"""
                 instance_operate: IOperater = cls_operate(file_instance)
+                # TODO:[-] 24-08-22 加入查找日志记录
+                downloadfile_remote_fullpath: str = f'{remote_root_path}/{file_instance.get_file_name()}'
+                downloadfile_local_fullpath: str = f'{local_root_path}/{file_instance.get_file_name()}'
+                logger.info(f'[-]下载地址:{downloadfile_remote_fullpath}——本地地址:{downloadfile_local_fullpath}')
                 """ 操作类实例化对象"""
                 instance_operate.todo(ts=stand_start_ts)
             # TODO:[*] 24-07-29 加入异常集
@@ -362,6 +366,9 @@ def timer_download_fub_realdata():
     """utc时"""
     # now_ts: int = ts
     now_ts: int = arrow.utcnow().int_timestamp
+    # TODO:[-] 24-08-22 将标准化时间放在触发器中
+    stand_ts: int = get_fub_start_ts(now_ts)
+    stand_dt_str: str = arrow.get(stand_ts).format('YYYY-MM-DD HH:ss')
     # TODO:[-] 24-03-27 采用 docker 容器内绝对路径为 /data/remote
     local_root_path: str = DOWNLOAD_OPTIONS.get('local_root_path')
     # TODO:[-] 24-02-26 此处修改为remote的全路径
@@ -369,7 +376,7 @@ def timer_download_fub_realdata():
     remote_root_path: str = DOWNLOAD_OPTIONS.get('remote_fub_root_path')
 
     """当前时间的时间戳"""
-    logger.info(f"触发timer_download_FUB_realdata|ts:{now_ts}")
+    logger.info(f"触发timer_download_FUB_realdata|ts:{stand_ts}|dt:{stand_dt_str}")
 
     case = FubRealdataDownloadCase()
     case.todo(ts=now_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
@@ -380,7 +387,7 @@ def task_downloads_fub_byrange(start_ts: int, end_ts: int, split_hours=1):
         根据 起止时间以及切分 hours批量下载并写入浮标数据
         延时补录
     @param start_ts:
-    @param end_ts:
+    @param end_ts: 为结束的 YYYY-MM-DD 00:00
     @param split_hours:
     @return:
     """
@@ -492,5 +499,21 @@ def delay_task(start_ts: int, end_ts: int):
     scheduler.add_job(timer_download_station_realdata, 'interval', minutes=30)
     # TODO:[*] 24-08-19
     # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
+    # # 启动调度任务
+    scheduler.start()
+
+
+def delay_fub_task(start_ts: int, end_ts: int):
+    """
+            执行定时延时作业:
+                定时下载浮标数据
+        :return:
+        """
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动定时任务触发事件:')
+    # TODO:[*] 24-08-19
+    scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=30)
     # # 启动调度任务
     scheduler.start()

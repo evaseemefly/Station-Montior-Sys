@@ -72,3 +72,6 @@ class RunTypeEnmum(Enum):
 
     DATAENTRY_FUB_RANGE = 104
     """录入浮标(时间段)实况"""
+
+    DELATY_FUB_TASK = 105
+    """延时任务"""

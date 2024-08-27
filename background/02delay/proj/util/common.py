@@ -130,6 +130,16 @@ def get_station_start_ts(ts: int) -> int:
     return stand_start_ts
 
 
+def get_fub_start_ts(ts: int) -> int:
+    """
+        TODO:[*] 24-08-21 根据当前时间获取对应的本地整点时间戳
+    @param ts:
+    @return:
+    """
+    current_arrow: arrow.Arrow = arrow.get(ts)
+    return current_arrow.floor('hour').int_timestamp
+
+
 def get_filestamp(ts: int) -> str:
     """
         根据时间戳获取当前时间戳对应的时间日期(mmdd)

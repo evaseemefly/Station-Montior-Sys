@@ -7,6 +7,7 @@ import pandas as pd
 
 from common.default import DEFAULT_SURGE, NAN_VAL
 from common.enums import ElementTypeEnum, ObservationTypeEnum
+from db.db import session_scope
 from mid_models.stations import DistStationListMidModel, StationInstanceMidModel
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, WindPerclockDataModel, \
     get_wind_instance_model, get_surge_instance_model
@@ -169,7 +170,7 @@ class StationBaseDao(BaseDao):
         :param end_ts:
         :return:
         """
-        session = self.db.session
+        # session = self.db.session
         """要素枚举集合"""
         tab_name: str = WindPerclockDataModel.get_split_tab_name(start_ts)
         station_obserivation_list: List[DistStationListMidModel] = []
@@ -177,129 +178,128 @@ class StationBaseDao(BaseDao):
         # TODO:[-] 24-06-18 加入基于起止时间的时间戳集合范围标准化（对于缺省值进行填充） 时间戳单位(s)
         list_ts_standard: List[int] = get_diff_timestamp_list(start_ts, end_ts)
         """标准化后的时间戳数组"""
+        with session_scope() as session:
+            for temp_code in codes:
+                # step 2-1: 获取海洋站风要素实况
+                # 获取指定站点的风要素(ws,wd)
 
-        for temp_code in codes:
-            # step 2-1: 获取海洋站风要素实况
-            # 获取指定站点的风要素(ws,wd)
+                # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
+                # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
+                # 循环第二次时:
+                # sqlalchemy.exc.InvalidRequestError: Table 'wind_perclock_data_realtime_2023' is already defined for this MetaData instance.
+                # Specify 'extend_existing=True' to redefine options and columns on an existing Table object.
+                query_model_ = get_wind_instance_model(session, start_ts)
+                """风要素model实体"""
+                wind_stmt_ = select(query_model_.ws, query_model_.wd, query_model_.station_code,
+                                    query_model_.issue_ts).where(query_model_.station_code == temp_code,
+                                                                 query_model_.issue_ts >= start_ts,
+                                                                 query_model_.issue_ts <= end_ts).order_by(
+                    query_model_.issue_ts)
+                """根据起始时间戳的stmt表达式"""
+                combined_stmt = wind_stmt_
+                """合并后的查询stmt表达式(可能跨表)"""
 
-            # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
-            # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
-            # 循环第二次时:
-            # sqlalchemy.exc.InvalidRequestError: Table 'wind_perclock_data_realtime_2023' is already defined for this MetaData instance.
-            # Specify 'extend_existing=True' to redefine options and columns on an existing Table object.
-            query_model_ = get_wind_instance_model(session, start_ts)
-            """风要素model实体"""
-            wind_stmt_ = select(query_model_.ws, query_model_.wd, query_model_.station_code,
-                                query_model_.issue_ts).where(query_model_.station_code == temp_code,
-                                                             query_model_.issue_ts >= start_ts,
-                                                             query_model_.issue_ts <= end_ts).order_by(
-                query_model_.issue_ts)
-            """根据起始时间戳的stmt表达式"""
-            combined_stmt = wind_stmt_
-            """合并后的查询stmt表达式(可能跨表)"""
+                # 若起止时间涉及跨年的情况，需要跨表查询
+                if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
+                    query_model_next_ = get_wind_instance_model(session, end_ts)
+                    """获取跨表的model实体"""
+                    wind_stmt_next_ = select(query_model_next_.ws, query_model_next_.wd,
+                                             query_model_next_.station_code,
+                                             query_model_next_.issue_ts).where(
+                        query_model_next_.station_code == temp_code,
+                        query_model_next_.issue_ts >= start_ts,
+                        query_model_next_.issue_ts <= end_ts).order_by(
+                        query_model_next_.issue_ts)
+                    """针对跨表的查询表达式"""
+                    combined_stmt = union_all(wind_stmt_, wind_stmt_next_)
 
-            # 若起止时间涉及跨年的情况，需要跨表查询
-            if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
-                query_model_next_ = get_wind_instance_model(session, end_ts)
-                """获取跨表的model实体"""
-                wind_stmt_next_ = select(query_model_next_.ws, query_model_next_.wd,
-                                         query_model_next_.station_code,
-                                         query_model_next_.issue_ts).where(
-                    query_model_next_.station_code == temp_code,
-                    query_model_next_.issue_ts >= start_ts,
-                    query_model_next_.issue_ts <= end_ts).order_by(
-                    query_model_next_.issue_ts)
-                """针对跨表的查询表达式"""
-                combined_stmt = union_all(wind_stmt_, wind_stmt_next_)
+                # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
+                # eg: [(9.1, 11, 'BYQ', 1708347600), (8.7, 15, 'BYQ', 1708351200), ..]
+                combined_res_wind = session.execute(combined_stmt).all()
+                """风要素查询结果(含跨表查询)"""
+                res_wind_next_ = []
+                temp_ts_list: List[int] = []
+                """时间戳集合"""
+                temp_wd_list: List[int] = []
+                """风要素-风向集合"""
+                temp_ws_list: List[float] = []
+                """风要素-风速集合"""
 
-            # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
-            # eg: [(9.1, 11, 'BYQ', 1708347600), (8.7, 15, 'BYQ', 1708351200), ..]
-            combined_res_wind = session.execute(combined_stmt).all()
-            """风要素查询结果(含跨表查询)"""
-            res_wind_next_ = []
-            temp_ts_list: List[int] = []
-            """时间戳集合"""
-            temp_wd_list: List[int] = []
-            """风要素-风向集合"""
-            temp_ws_list: List[float] = []
-            """风要素-风速集合"""
+                # step1-2 :针对风要素生成对应的数组
+                temp_wind_ts_list = [i[3] for i in combined_res_wind]
+                """风要素对应的ts数组"""
+                temp_wd_list = [i[1] for i in combined_res_wind]
+                temp_ws_list = [i[0] for i in combined_res_wind]
 
-            # step1-2 :针对风要素生成对应的数组
-            temp_wind_ts_list = [i[3] for i in combined_res_wind]
-            """风要素对应的ts数组"""
-            temp_wd_list = [i[1] for i in combined_res_wind]
-            temp_ws_list = [i[0] for i in combined_res_wind]
+                # step1-3: 生成风要素df
+                combined_res_wind_df = pd.DataFrame({"ts": temp_wind_ts_list, 'wd': temp_wd_list, 'ws': temp_ws_list})
+                # step1-4: 重置索引
+                combined_res_wind_df.set_index("ts", inplace=True)
+                # 以标准化后的时间戳数组为 index，并进行缺失值填充
+                aligned_res_wind_df = combined_res_wind_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+                wd_standard_list = aligned_res_wind_df['wd'].tolist()
+                """标准化后的风向数组"""
+                ws_standard_lis = aligned_res_wind_df['ws'].tolist()
+                """标准化后的风速数组"""
 
-            # step1-3: 生成风要素df
-            combined_res_wind_df = pd.DataFrame({"ts": temp_wind_ts_list, 'wd': temp_wd_list, 'ws': temp_ws_list})
-            # step1-4: 重置索引
-            combined_res_wind_df.set_index("ts", inplace=True)
-            # 以标准化后的时间戳数组为 index，并进行缺失值填充
-            aligned_res_wind_df = combined_res_wind_df.reindex(list_ts_standard, fill_value=NAN_VAL)
-            wd_standard_list = aligned_res_wind_df['wd'].tolist()
-            """标准化后的风向数组"""
-            ws_standard_lis = aligned_res_wind_df['ws'].tolist()
-            """标准化后的风速数组"""
-
-            # step 2-2: 获取海洋站潮位要素实况
-            query_surge_model_ = get_surge_instance_model(session, start_ts)
-            surge_stmt_ = select(query_surge_model_.surge, query_surge_model_.station_code,
-                                 query_surge_model_.issue_ts).where(query_surge_model_.station_code == temp_code,
-                                                                    query_surge_model_.issue_ts >= start_ts,
-                                                                    query_surge_model_.issue_ts <= end_ts).order_by(
-                query_surge_model_.issue_ts)
-            combined_surge_stmt = surge_stmt_
-            """若涉及到跨表需要跨表查询,需要对stmt进行拼接操作"""
-            if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
-                query_model_next_ = get_surge_instance_model(session, end_ts)
-                surge_stmt_next_ = select(query_surge_model_.surge, query_surge_model_.station_code,
-                                          query_surge_model_.issue_ts).where(
-                    query_surge_model_.station_code == temp_code,
-                    query_surge_model_.issue_ts >= start_ts,
-                    query_surge_model_.issue_ts <= end_ts).order_by(
+                # step 2-2: 获取海洋站潮位要素实况
+                query_surge_model_ = get_surge_instance_model(session, start_ts)
+                surge_stmt_ = select(query_surge_model_.surge, query_surge_model_.station_code,
+                                     query_surge_model_.issue_ts).where(query_surge_model_.station_code == temp_code,
+                                                                        query_surge_model_.issue_ts >= start_ts,
+                                                                        query_surge_model_.issue_ts <= end_ts).order_by(
                     query_surge_model_.issue_ts)
-                combined_surge_stmt = union_all(surge_stmt_, surge_stmt_next_)
-            # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
-            # eg: [(9.1, 11, 'BYQ', 1708347600), (8.7, 15, 'BYQ', 1708351200), ..]
-            combined_res_surge = session.execute(combined_surge_stmt).all()
+                combined_surge_stmt = surge_stmt_
+                """若涉及到跨表需要跨表查询,需要对stmt进行拼接操作"""
+                if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
+                    query_model_next_ = get_surge_instance_model(session, end_ts)
+                    surge_stmt_next_ = select(query_surge_model_.surge, query_surge_model_.station_code,
+                                              query_surge_model_.issue_ts).where(
+                        query_surge_model_.station_code == temp_code,
+                        query_surge_model_.issue_ts >= start_ts,
+                        query_surge_model_.issue_ts <= end_ts).order_by(
+                        query_surge_model_.issue_ts)
+                    combined_surge_stmt = union_all(surge_stmt_, surge_stmt_next_)
+                # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
+                # eg: [(9.1, 11, 'BYQ', 1708347600), (8.7, 15, 'BYQ', 1708351200), ..]
+                combined_res_surge = session.execute(combined_surge_stmt).all()
 
-            """
-                [(Decimal('277.0000000000'), 'WFG', 1708387200), ]
-            """
-            list_res_ts: List[int] = [i[2] for i in combined_res_surge]
-            """基于combined_res_surge的 issue_ts 生成的时间戳集合"""
-            list_res_surge: List[float] = [i[0] for i in combined_res_surge]
-            """基于combined_res_surge的 surge 生成的增水集合"""
-            combined_res_df = pd.DataFrame({"ts": list_res_ts, 'surge': list_res_surge})
-            # 设置ts为index
-            combined_res_df.set_index("ts", inplace=True)
-            # TODO:[*] 24-06-19 若对于缺省值使用 np.NaN 或 None 填充，填充后为 nan ，序列化时会出现 ValueError: Out of range float values are not JSON compliant 错误
-            # 序列化出现的错误，建议不使用通过默认值进行填充
-            aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
-            # list 结果为: ['nan', 'nan', Decimal('157.0000000000')
-            temp_surge_list = aligned_res_df['surge'].tolist()
-            """索引采用时间戳集合作为index(list_ts)，存在nan的情况"""
+                """
+                    [(Decimal('277.0000000000'), 'WFG', 1708387200), ]
+                """
+                list_res_ts: List[int] = [i[2] for i in combined_res_surge]
+                """基于combined_res_surge的 issue_ts 生成的时间戳集合"""
+                list_res_surge: List[float] = [i[0] for i in combined_res_surge]
+                """基于combined_res_surge的 surge 生成的增水集合"""
+                combined_res_df = pd.DataFrame({"ts": list_res_ts, 'surge': list_res_surge})
+                # 设置ts为index
+                combined_res_df.set_index("ts", inplace=True)
+                # TODO:[*] 24-06-19 若对于缺省值使用 np.NaN 或 None 填充，填充后为 nan ，序列化时会出现 ValueError: Out of range float values are not JSON compliant 错误
+                # 序列化出现的错误，建议不使用通过默认值进行填充
+                aligned_res_df = combined_res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+                # list 结果为: ['nan', 'nan', Decimal('157.0000000000')
+                temp_surge_list = aligned_res_df['surge'].tolist()
+                """索引采用时间戳集合作为index(list_ts)，存在nan的情况"""
 
-            """根据 start_ts , end_ts 生成的时间戳"""
-            temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                element_type=ElementTypeEnum.WD,
-                                                                                ts_list=list_ts_standard,
-                                                                                val_list=wd_standard_list)
-            temp_station_ws_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                element_type=ElementTypeEnum.WS,
-                                                                                ts_list=list_ts_standard,
-                                                                                val_list=ws_standard_lis)
-            temp_station_surge_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                   element_type=ElementTypeEnum.WL,
-                                                                                   ts_list=list_ts_standard,
-                                                                                   val_list=temp_surge_list)
-            temp_station_: DistStationListMidModel = DistStationListMidModel(code=temp_code,
-                                                                             obs_type=ObservationTypeEnum.STATION,
-                                                                             observation_list=[temp_station_ws_,
-                                                                                               temp_station_wd_,
-                                                                                               temp_station_surge_])
-            station_obserivation_list.append(temp_station_)
-
+                """根据 start_ts , end_ts 生成的时间戳"""
+                temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                    element_type=ElementTypeEnum.WD,
+                                                                                    ts_list=list_ts_standard,
+                                                                                    val_list=wd_standard_list)
+                temp_station_ws_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                    element_type=ElementTypeEnum.WS,
+                                                                                    ts_list=list_ts_standard,
+                                                                                    val_list=ws_standard_lis)
+                temp_station_surge_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                       element_type=ElementTypeEnum.WL,
+                                                                                       ts_list=list_ts_standard,
+                                                                                       val_list=temp_surge_list)
+                temp_station_: DistStationListMidModel = DistStationListMidModel(code=temp_code,
+                                                                                 obs_type=ObservationTypeEnum.STATION,
+                                                                                 observation_list=[temp_station_ws_,
+                                                                                                   temp_station_wd_,
+                                                                                                   temp_station_surge_])
+                station_obserivation_list.append(temp_station_)
         return station_obserivation_list
 
     def get_stations_realdata_list_backup(self, codes: List[str], start_ts: int, end_ts: int) -> List[
@@ -313,107 +313,110 @@ class StationBaseDao(BaseDao):
         :param end_ts:
         :return:
         """
-        session = self.db.session
+        # session = self.db.session
         elements: List[ElementTypeEnum] = [ElementTypeEnum.WD, ElementTypeEnum.WS, ElementTypeEnum.WL]
         """要素枚举集合"""
         tab_name: str = WindPerclockDataModel.get_split_tab_name(start_ts)
         station_obserivation_list: List[DistStationListMidModel] = []
         """被查询海洋站的观测数据集合"""
 
-        for temp_code in codes:
-            # step 2-1: 获取海洋站风要素实况
-            # 获取指定站点的风要素(ws,wd)
+        with session_scope() as session:
+            for temp_code in codes:
+                # step 2-1: 获取海洋站风要素实况
+                # 获取指定站点的风要素(ws,wd)
 
-            # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
-            # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
-            query_model_ = get_wind_instance_model(session, start_ts)
-            wind_stmt_ = select(query_model_.c.ws, query_model_.c.wd, query_model_.c.station_code,
-                                query_model_.c.issue_ts).where(query_model_.station_code == temp_code,
-                                                               query_model_.issue_ts >= start_ts,
-                                                               query_model_.issue_ts <= end_ts).order_by(
-                query_model_.issue_ts)
-            query_model_next_ = get_wind_instance_model(session, end_ts)
-            wind_stmt_next_ = select(query_model_next_.c.ws, query_model_next_.c.wd, query_model_next_.c.station_code,
-                                     query_model_next_.c.issue_ts).where(query_model_next_.station_code == temp_code,
-                                                                         query_model_next_.issue_ts >= start_ts,
-                                                                         query_model_next_.issue_ts <= end_ts).order_by(
-                query_model_next_.issue_ts)
-            # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
-            combined_stmt = union_all(wind_stmt_, wind_stmt_next_)
-            combined_res_wind = session.execute(combined_stmt).all()
-            res_wind_next_ = []
-            if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
-                query_model_next_ = get_wind_instance_model(end_ts)
-                wind_stmt_next_ = select(query_model_next_).where(query_model_next_.station_code == temp_code,
-                                                                  query_model_next_.issue_ts >= start_ts,
-                                                                  query_model_next_.issue_ts <= end_ts).order_by(
+                # # TODO:[-] 24-05-28 注意使用 stmt.union_all 的方式拼接另一个 stmt表达式
+                # res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
+                query_model_ = get_wind_instance_model(session, start_ts)
+                wind_stmt_ = select(query_model_.c.ws, query_model_.c.wd, query_model_.c.station_code,
+                                    query_model_.c.issue_ts).where(query_model_.station_code == temp_code,
+                                                                   query_model_.issue_ts >= start_ts,
+                                                                   query_model_.issue_ts <= end_ts).order_by(
+                    query_model_.issue_ts)
+                query_model_next_ = get_wind_instance_model(session, end_ts)
+                wind_stmt_next_ = select(query_model_next_.c.ws, query_model_next_.c.wd,
+                                         query_model_next_.c.station_code,
+                                         query_model_next_.c.issue_ts).where(
+                    query_model_next_.station_code == temp_code,
+                    query_model_next_.issue_ts >= start_ts,
+                    query_model_next_.issue_ts <= end_ts).order_by(
                     query_model_next_.issue_ts)
-                res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
-            # TODO:[*] 24-05-29 将 res 与 res_next_ 拼接
-            wind_res_combined = res_wind_ + res_wind_next_
+                # TODO:[-] 24-05-30 若使用 union 拼接两个子查询结果，只输出第一列——此查询中为 ws ,是查询导致的，不要使用 .scalars().all() 。使用 .all()
+                combined_stmt = union_all(wind_stmt_, wind_stmt_next_)
+                combined_res_wind = session.execute(combined_stmt).all()
+                res_wind_next_ = []
+                if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
+                    query_model_next_ = get_wind_instance_model(end_ts)
+                    wind_stmt_next_ = select(query_model_next_).where(query_model_next_.station_code == temp_code,
+                                                                      query_model_next_.issue_ts >= start_ts,
+                                                                      query_model_next_.issue_ts <= end_ts).order_by(
+                        query_model_next_.issue_ts)
+                    res_wind_next_ = session.execute(wind_stmt_next_).scalars().all()
+                # TODO:[*] 24-05-29 将 res 与 res_next_ 拼接
+                wind_res_combined = res_wind_ + res_wind_next_
 
-            temp_ts_list: List[int] = []
-            temp_wd_list: List[int] = []
-            temp_ws_list: List[float] = []
-            for temp_wind_ in wind_res_combined:
-                # fub_realdata_list: List[DistStationListMidModel] = []
-                temp_ts_: int = temp_wind_.issue_ts
-                """时间戳"""
-                temp_wd_: int = temp_wind_.wd
-                """风向"""
-                temp_ws_: float = temp_wind_.ws
-                """风速"""
-                temp_ts_list.append(temp_ts_)
-                temp_wd_list.append(temp_wd_)
-                temp_ws_list.append(temp_ws_)
+                temp_ts_list: List[int] = []
+                temp_wd_list: List[int] = []
+                temp_ws_list: List[float] = []
+                for temp_wind_ in wind_res_combined:
+                    # fub_realdata_list: List[DistStationListMidModel] = []
+                    temp_ts_: int = temp_wind_.issue_ts
+                    """时间戳"""
+                    temp_wd_: int = temp_wind_.wd
+                    """风向"""
+                    temp_ws_: float = temp_wind_.ws
+                    """风速"""
+                    temp_ts_list.append(temp_ts_)
+                    temp_wd_list.append(temp_wd_)
+                    temp_ws_list.append(temp_ws_)
 
-            # step 2-2: 获取海洋站潮位要素实况
-            SurgePerclockDataModel.set_split_tab_name(start_ts)
-            surge_stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == temp_code,
-                                                              SurgePerclockDataModel.issue_ts >= start_ts,
-                                                              SurgePerclockDataModel.issue_ts <= end_ts).order_by(
-                SurgePerclockDataModel.issue_ts)
-            res_surge = session.execute(surge_stmt).scalars().all()
-            res_surge_next_ = []
-            if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
-                SurgePerclockDataModel.set_split_tab_name(end_ts)
-                surge_stmt_next_ = select(SurgePerclockDataModel).where(
-                    SurgePerclockDataModel.station_code == temp_code,
-                    SurgePerclockDataModel.issue_ts >= start_ts,
-                    SurgePerclockDataModel.issue_ts <= end_ts).order_by(
+                # step 2-2: 获取海洋站潮位要素实况
+                SurgePerclockDataModel.set_split_tab_name(start_ts)
+                surge_stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == temp_code,
+                                                                  SurgePerclockDataModel.issue_ts >= start_ts,
+                                                                  SurgePerclockDataModel.issue_ts <= end_ts).order_by(
                     SurgePerclockDataModel.issue_ts)
-                res_surge_next_ = session.execute(surge_stmt_next_).scalars().all()
-                pass
-            # res = session.execute(wind_sql_str)
-            res_surge_combined = res_surge + res_surge_next_
-            temp_surge_ts_list: List[int] = []
-            temp_surge_list: List[float] = []
-            for temp_surge_ in res_surge_combined:
-                # fub_realdata_list: List[DistStationListMidModel] = []
-                temp_ts_: int = temp_surge_.issue_ts
-                """时间戳"""
-                temp_ws_: float = temp_surge_.surge
-                """风速"""
-                temp_surge_ts_list.append(temp_ts_)
-                temp_surge_list.append(temp_ws_)
+                res_surge = session.execute(surge_stmt).scalars().all()
+                res_surge_next_ = []
+                if arrow.get(start_ts).date().year != arrow.get(end_ts).date().year:
+                    SurgePerclockDataModel.set_split_tab_name(end_ts)
+                    surge_stmt_next_ = select(SurgePerclockDataModel).where(
+                        SurgePerclockDataModel.station_code == temp_code,
+                        SurgePerclockDataModel.issue_ts >= start_ts,
+                        SurgePerclockDataModel.issue_ts <= end_ts).order_by(
+                        SurgePerclockDataModel.issue_ts)
+                    res_surge_next_ = session.execute(surge_stmt_next_).scalars().all()
+                    pass
+                # res = session.execute(wind_sql_str)
+                res_surge_combined = res_surge + res_surge_next_
+                temp_surge_ts_list: List[int] = []
+                temp_surge_list: List[float] = []
+                for temp_surge_ in res_surge_combined:
+                    # fub_realdata_list: List[DistStationListMidModel] = []
+                    temp_ts_: int = temp_surge_.issue_ts
+                    """时间戳"""
+                    temp_ws_: float = temp_surge_.surge
+                    """风速"""
+                    temp_surge_ts_list.append(temp_ts_)
+                    temp_surge_list.append(temp_ws_)
 
-            temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                element_type=ElementTypeEnum.WD,
-                                                                                ts_list=temp_ts_list,
-                                                                                val_list=temp_wd_list)
-            temp_station_ws_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                element_type=ElementTypeEnum.WS,
-                                                                                ts_list=temp_ts_list,
-                                                                                val_list=temp_ws_list)
-            temp_station_surge_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
-                                                                                   element_type=ElementTypeEnum.WL,
-                                                                                   ts_list=temp_ts_list,
-                                                                                   val_list=temp_surge_list)
-            temp_station_: DistStationListMidModel = DistStationListMidModel(code=temp_code,
-                                                                             obs_type=ObservationTypeEnum.STATION,
-                                                                             observation_list=[temp_station_ws_,
-                                                                                               temp_station_wd_,
-                                                                                               temp_station_surge_])
-            station_obserivation_list.append(temp_station_)
+                temp_station_wd_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                    element_type=ElementTypeEnum.WD,
+                                                                                    ts_list=temp_ts_list,
+                                                                                    val_list=temp_wd_list)
+                temp_station_ws_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                    element_type=ElementTypeEnum.WS,
+                                                                                    ts_list=temp_ts_list,
+                                                                                    val_list=temp_ws_list)
+                temp_station_surge_: StationInstanceMidModel = StationInstanceMidModel(code=temp_code,
+                                                                                       element_type=ElementTypeEnum.WL,
+                                                                                       ts_list=temp_ts_list,
+                                                                                       val_list=temp_surge_list)
+                temp_station_: DistStationListMidModel = DistStationListMidModel(code=temp_code,
+                                                                                 obs_type=ObservationTypeEnum.STATION,
+                                                                                 observation_list=[temp_station_ws_,
+                                                                                                   temp_station_wd_,
+                                                                                                   temp_station_surge_])
+                station_obserivation_list.append(temp_station_)
 
         return station_obserivation_list
