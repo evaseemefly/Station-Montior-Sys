@@ -25,7 +25,7 @@ from common.enums import ElementTypeEnum, ExtremumType
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, WindPerclockDataModel, \
     WindPerclockExtremumDataModel, FubPerclockDataModel
 from core.readers import SurgeReader
-from db.db import DbFactory, check_exist_tab, session_scope
+from db.db import DbFactory, check_exist_tab, session_yield_scope
 from util.qc import is_standard_ws, DEFAULT_VAL_LIST
 
 
@@ -69,7 +69,8 @@ class SurgeStore(IStore):
         # TODO:[*] 24-07-29 加入了写入db异常处理
         # step2: 根据实况 与 极值 集合写入db
         # TODO:[*] 24-08-27 此处出现了bug，尚未解决!
-        with DbFactory().Session as session:
+        # with DbFactory().Session as session:
+        with session_yield_scope() as session:
             try:
                 self._loop_realdata_2_db(realdata_list, ts, session)
                 self._loop_extremum_2_db(extremum_list, ts, session)
@@ -126,9 +127,8 @@ class SurgeStore(IStore):
                                                     gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 session.add(temp_model)
         session.commit()
-
         logger.info(
-            f'[-]写入:code:{station_code},ts:{ts},站点数据成功')
+            f'[-]写入:code:{station_code},ts:{ts},站点[潮位-实况]数据成功')
         pass
 
     def _loop_extremum_2_db(self, extremum_list: List[dict], ts: int, session: scoped_session):
@@ -170,6 +170,8 @@ class SurgeStore(IStore):
                                                             gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 session.add(temp_model)
         session.commit()
+        logger.info(
+            f'[-]写入:code:{station_code},ts:{ts},站点[潮位-极值]数据成功')
         pass
 
     def check_tab(self, dt_arrow: arrow):
@@ -211,7 +213,7 @@ class PerclockWindStore(IStore):
         max: WindExtremum = kwargs.get('max')
         extremum: WindExtremum = kwargs.get('extremum')
         # 分别将文件中的逐时风及极值风写入db
-        with session_scope as session:
+        with session_yield_scope() as session:
             try:
                 self._loop_realdata_2_db(realdata_list, ts, session)
                 self._loop_extremum_2_db(extremum, max, ts, session)
@@ -287,7 +289,8 @@ class PerclockWindStore(IStore):
                                                    gmt_modify_time=utc_now, gmt_create_time=utc_now)
                 session.add(temp_model)
         session.commit()
-
+        logger.info(
+            f'[-]写入:code:{station_code},ts:{ts},站点[风-实况]数据成功')
         pass
 
     def _loop_extremum_2_db(self, extremum: WindExtremum, max: WindExtremum, ts: int, session: scoped_session):
@@ -392,7 +395,8 @@ class PerclockWindStore(IStore):
                 session.add(temp_extremum_model)
                 pass
         session.commit()
-
+        logger.info(
+            f'[-]写入:code:{station_code},ts:{ts},站点[风-极值]数据成功')
         pass
 
 
@@ -420,7 +424,7 @@ class PerclockFubStore(IStore):
         fub_code: str = realdata.code
 
         realdata_list: List[FubElementMidModel] = realdata.list_vals
-        with session_scope as session:
+        with session_yield_scope() as session:
             try:
                 self._loop_realdata_2db(realdata_list, ts, fub_code, session)
             except Exception:
@@ -468,4 +472,6 @@ class PerclockFubStore(IStore):
                 pass
 
         session.commit()
+        logger.info(
+            f'[-]写入:code:{code},ts:{ts},站点[浮标-全要素]数据成功')
         pass
