@@ -11,6 +11,8 @@ from loguru import logger
 from sqlalchemy import distinct, select, update
 from datetime import datetime
 
+from sqlalchemy.orm import scoped_session
+
 from common.default import DEFAULT_SURGE, DEFAULT_WINDSPEED, DEFAULT_DIR
 from common.exceptions import ReadataStoreError
 from core.files import IFile, IStationFile
@@ -23,15 +25,16 @@ from common.enums import ElementTypeEnum, ExtremumType
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, WindPerclockDataModel, \
     WindPerclockExtremumDataModel, FubPerclockDataModel
 from core.readers import SurgeReader
-from db.db import DbFactory, check_exist_tab
+from db.db import DbFactory, check_exist_tab, session_scope
 from util.qc import is_standard_ws, DEFAULT_VAL_LIST
 
 
 class IStore(ABC):
 
     def __init__(self):
-        self.session = DbFactory().Session
+        # self.session = DbFactory().Session
         """数据库session"""
+        pass
 
     @abstractmethod
     def to_db(self, **kwargs):
@@ -65,15 +68,17 @@ class SurgeStore(IStore):
 
         # TODO:[*] 24-07-29 加入了写入db异常处理
         # step2: 根据实况 与 极值 集合写入db
-        try:
-            self._loop_realdata_2_db(realdata_list, ts)
-            self._loop_extremum_2_db(extremum_list, ts)
-        except Exception:
-            self.session.commit()
-            self.session.remove()
-            raise ReadataStoreError()
+        # TODO:[*] 24-08-27 此处出现了bug，尚未解决!
+        with DbFactory().Session as session:
+            try:
+                self._loop_realdata_2_db(realdata_list, ts, session)
+                self._loop_extremum_2_db(extremum_list, ts, session)
+                pass
+            except Exception as e:
+                raise ReadataStoreError()
+        pass
 
-    def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int):
+    def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int, session: scoped_session):
         """
             TODO:[-] 24-01-16
             循环将实况数据写入 db
@@ -98,7 +103,7 @@ class SurgeStore(IStore):
             # TODO:[*] 24-04-07 加入指定表是否存在的判断，若不存在则创建
             stmt = select(SurgePerclockDataModel).where(SurgePerclockDataModel.station_code == station_code,
                                                         SurgePerclockDataModel.issue_ts == temp_ts)
-            filter_res = self.session.execute(stmt).fetchall()
+            filter_res = session.execute(stmt).fetchall()
             # 当前时间
             utc_now: datetime = arrow.Arrow.utcnow().datetime
             # 若已经存在则直接更新
@@ -111,7 +116,7 @@ class SurgeStore(IStore):
                     issue_ts=temp_ts,
                     gmt_modify_time=utc_now
                 ))
-                self.session.execute(update_stmt)
+                session.execute(update_stmt)
             # 若不存在则insert
             else:
                 temp_model = SurgePerclockDataModel(surge=temp_standard_val,
@@ -119,14 +124,14 @@ class SurgeStore(IStore):
                                                     issue_ts=temp_ts,
                                                     issue_dt=temp_dt,
                                                     gmt_modify_time=utc_now, gmt_create_time=utc_now)
-                self.session.add(temp_model)
-        self.session.commit()
-        self.session.remove()
+                session.add(temp_model)
+        session.commit()
+
         logger.info(
             f'[-]写入:code:{station_code},ts:{ts},站点数据成功')
         pass
 
-    def _loop_extremum_2_db(self, extremum_list: List[dict], ts: int):
+    def _loop_extremum_2_db(self, extremum_list: List[dict], ts: int, session: scoped_session):
         """
             循环将极值写入db
         :param extremum_list: {'ts','surge'}[]
@@ -142,7 +147,7 @@ class SurgeStore(IStore):
             stmt = select(SurgePerclockExtremumDataModel).where(
                 SurgePerclockExtremumDataModel.station_code == station_code,
                 SurgePerclockExtremumDataModel.issue_ts == temp_ts)
-            filter_res = self.session.execute(stmt).fetchall()
+            filter_res = session.execute(stmt).fetchall()
             # 当前时间
             utc_now: datetime = arrow.Arrow.utcnow().datetime
             # 若已经存在则直接更新
@@ -155,7 +160,7 @@ class SurgeStore(IStore):
                     issue_ts=temp_ts,
                     gmt_modify_time=utc_now
                 ))
-                self.session.execute(update_stmt)
+                session.execute(update_stmt)
             # 若不存在则insert
             else:
                 temp_model = SurgePerclockExtremumDataModel(surge=temp_surge,
@@ -163,9 +168,8 @@ class SurgeStore(IStore):
                                                             issue_ts=temp_ts,
                                                             issue_dt=temp_dt,
                                                             gmt_modify_time=utc_now, gmt_create_time=utc_now)
-                self.session.add(temp_model)
-        self.session.commit()
-        self.session.remove()
+                session.add(temp_model)
+        session.commit()
         pass
 
     def check_tab(self, dt_arrow: arrow):
@@ -189,9 +193,10 @@ class PerclockWindStore(IStore):
     """
 
     def __init__(self, file: IStationFile):
+        super().__init__()
         self.file = file
         """当前要素文件"""
-        self.session = DbFactory().Session
+        # self.session = DbFactory().Session
         """数据库session"""
 
     @decorator_timer_consuming
@@ -206,13 +211,12 @@ class PerclockWindStore(IStore):
         max: WindExtremum = kwargs.get('max')
         extremum: WindExtremum = kwargs.get('extremum')
         # 分别将文件中的逐时风及极值风写入db
-        try:
-            self._loop_realdata_2_db(realdata_list, ts)
-            self._loop_extremum_2_db(extremum, max, ts)
-        except Exception:
-            self.session.commit()
-            self.session.remove()
-            raise ReadataStoreError()
+        with session_scope as session:
+            try:
+                self._loop_realdata_2_db(realdata_list, ts, session)
+                self._loop_extremum_2_db(extremum, max, ts, session)
+            except Exception:
+                raise ReadataStoreError()
         pass
 
     def check_tab(self, dt_arrow: arrow):
@@ -228,7 +232,7 @@ class PerclockWindStore(IStore):
             WindPerclockDataModel.create_tab(dt_arrow)
         pass
 
-    def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int):
+    def _loop_realdata_2_db(self, realdata_list: List[dict], ts: int, session: scoped_session):
         """
             写入 整点逐时风要素
         @param realdata_list:逐时风集合
@@ -257,7 +261,7 @@ class PerclockWindStore(IStore):
             # TODO:[*] 24-04-07 加入指定表是否存在的判断，若不存在则创建
             stmt = select(WindPerclockDataModel).where(WindPerclockDataModel.station_code == station_code,
                                                        WindPerclockDataModel.issue_ts == temp_ts)
-            filter_res = self.session.execute(stmt).fetchall()
+            filter_res = session.execute(stmt).fetchall()
             # 当前时间
             utc_now: datetime = arrow.Arrow.utcnow().datetime
             # 若已经存在则直接更新
@@ -272,7 +276,7 @@ class PerclockWindStore(IStore):
                     issue_dt=temp_dt,
                     gmt_modify_time=utc_now
                 ))
-                self.session.execute(update_stmt)
+                session.execute(update_stmt)
             # 若不存在则insert
             else:
                 temp_model = WindPerclockDataModel(ws=temp_standard_ws,
@@ -281,12 +285,12 @@ class PerclockWindStore(IStore):
                                                    issue_ts=temp_ts,
                                                    issue_dt=temp_dt,
                                                    gmt_modify_time=utc_now, gmt_create_time=utc_now)
-                self.session.add(temp_model)
-        self.session.commit()
-        self.session.remove()
+                session.add(temp_model)
+        session.commit()
+
         pass
 
-    def _loop_extremum_2_db(self, extremum: WindExtremum, max: WindExtremum, ts: int):
+    def _loop_extremum_2_db(self, extremum: WindExtremum, max: WindExtremum, ts: int, session: scoped_session):
         """
             将当前日期的风要素 极值与最大值 写入db
             TODO:[*] 24-04-09 此方法内判断方法较为冗余
@@ -315,8 +319,8 @@ class PerclockWindStore(IStore):
                 WindPerclockExtremumDataModel.station_code == station_code,
                 WindPerclockExtremumDataModel.dt_local_stamp == date_standard_str,
                 WindPerclockExtremumDataModel.extremum_type == ExtremumType.WIND_MAX.value, )
-            filter_res_max = self.session.execute(stmt_max).fetchall()
-            test_filter = self.session.execute(stmt_max).first()
+            filter_res_max = session.execute(stmt_max).fetchall()
+            test_filter = session.execute(stmt_max).first()
 
             if len(filter_res_max) > 0:
                 # 更新
@@ -339,7 +343,7 @@ class PerclockWindStore(IStore):
                 # test_filter.issue_ts = max.ts
                 # test_filter.issue_dt = arrow.get(max.ts).datetime
                 # test_filter.gmt_modify_time = utc_now
-                self.session.execute(update_stmt_max)
+                session.execute(update_stmt_max)
                 pass
             else:
                 temp_max_model = WindPerclockExtremumDataModel(ws=max.val,
@@ -351,7 +355,7 @@ class PerclockWindStore(IStore):
                                                                dt_local_stamp=date_standard_str,
                                                                extremum_type=ExtremumType.WIND_MAX.value
                                                                )
-                self.session.add(temp_max_model)
+                session.add(temp_max_model)
                 pass
         if is_standard_extremum:
             # step2: 更新 风要素 极值
@@ -359,7 +363,7 @@ class PerclockWindStore(IStore):
                 WindPerclockExtremumDataModel.station_code == station_code,
                 WindPerclockExtremumDataModel.dt_local_stamp == date_standard_str,
                 WindPerclockExtremumDataModel.extremum_type == ExtremumType.WIND_EXTREMUM.value, )
-            filter_res_extremum = self.session.execute(stmt_extremum).fetchall()
+            filter_res_extremum = session.execute(stmt_extremum).fetchall()
             if len(filter_res_extremum) > 0:
                 update_stmt_extremum = (update(WindPerclockExtremumDataModel).where(
                     WindPerclockExtremumDataModel.station_code == station_code,
@@ -372,7 +376,7 @@ class PerclockWindStore(IStore):
                     issue_dt=arrow.get(extremum.ts).datetime,
                     gmt_modify_time=utc_now
                 ))
-                self.session.execute(update_stmt_extremum)
+                session.execute(update_stmt_extremum)
                 pass
             else:
                 # 新增
@@ -385,10 +389,10 @@ class PerclockWindStore(IStore):
                                                                     dt_local_stamp=date_standard_str,
                                                                     extremum_type=ExtremumType.WIND_EXTREMUM.value
                                                                     )
-                self.session.add(temp_extremum_model)
+                session.add(temp_extremum_model)
                 pass
-        self.session.commit()
-        self.session.remove()
+        session.commit()
+
         pass
 
 
@@ -398,8 +402,9 @@ class PerclockFubStore(IStore):
     """
 
     def __init__(self, file: IStationFile):
+        super().__init__()
         self.file = file
-        self.session = DbFactory().Session
+        # self.session = DbFactory().Session
 
     @decorator_timer_consuming
     def to_db(self, **kwargs):
@@ -415,14 +420,14 @@ class PerclockFubStore(IStore):
         fub_code: str = realdata.code
 
         realdata_list: List[FubElementMidModel] = realdata.list_vals
-        try:
-            self._loop_realdata_2db(realdata_list, ts, fub_code)
-        except Exception:
-            self.session.commit()
-            self.session.remove()
-            raise ReadataStoreError()
+        with session_scope as session:
+            try:
+                self._loop_realdata_2db(realdata_list, ts, fub_code, session)
+            except Exception:
 
-    def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str):
+                raise ReadataStoreError()
+
+    def _loop_realdata_2db(self, realdata: List[FubElementMidModel], ts: int, code: str, session: scoped_session):
         """
             将浮标实况写入 db
         @param realdata:
@@ -438,7 +443,7 @@ class PerclockFubStore(IStore):
             stmt = select(FubPerclockDataModel).where(FubPerclockDataModel.station_code == code,
                                                       FubPerclockDataModel.issue_ts == ts,
                                                       FubPerclockDataModel.element_type == temp.element_type.value)
-            filter_res = self.session.execute(stmt).fetchall()
+            filter_res = session.execute(stmt).fetchall()
             if len(filter_res) > 0:
                 # 更新
                 update_stmt = update(FubPerclockDataModel).where(FubPerclockDataModel.station_code == code,
@@ -449,7 +454,7 @@ class PerclockFubStore(IStore):
                     value=temp.val
                 )
                 """更新stmt"""
-                self.session.execute(update_stmt)
+                session.execute(update_stmt)
                 pass
             else:
                 # 新增
@@ -459,9 +464,8 @@ class PerclockFubStore(IStore):
                                                     value=temp.val,
                                                     issue_dt=arrow.get(ts).datetime, issue_ts=ts, station_code=code)
                 """等待更新的model"""
-                self.session.add(create_model)
+                session.add(create_model)
                 pass
 
-        self.session.commit()
-        self.session.remove()
+        session.commit()
         pass

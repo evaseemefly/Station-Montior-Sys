@@ -11,8 +11,8 @@ DATABASES = {
         'USER': 'root',  # 账号
         'PASSWORD': db_pwd,
         # 'HOST': 'localhost',  # HOST
-        # 'HOST': '128.5.9.79',  # HOST
-        'HOST': '192.168.0.115',  # nw-测试地址
+        'HOST': '128.5.9.79',  # HOST
+        # 'HOST': '192.168.0.115',  # nw-测试地址
         # 'HOST': '172.17.0.1',  # 9.79 docker 内部访问 mysql 地址
         # 'HOST': 'host.docker.internal',  # docker 宿主机
         'POST': 3306,  # 端口
@@ -28,7 +28,7 @@ DOWNLOAD_OPTIONS = {
     # 挂载映射盘路径
     # 'remote_root_path': r'/data/remote',
     'remote_root_path': r'X:',
-    'remote_station_root_path': r'/home/nmefc/share/test/ObsData/STATION',
+    'remote_station_root_path': r'/home/nmefc/data_test/数据',
     'remote_fub_root_path': r'',
     'remote_slb_root_path': r'/home/nmefc/share/test/ObsData/STATION',
     # 线上环境

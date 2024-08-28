@@ -226,6 +226,8 @@ LIST_STATIONS: List[StationElementMidModel] = [
 ]
 '''站点集合常量'''
 
+LIST_STATIONS: List[StationElementMidModel] = [StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.SURGE]), ]
+
 LIST_FUBS: List[StationElementMidModel] = [
 
     StationElementMidModel('01001', '01001', 'MF01001', [ElementTypeEnum.FUB]),
