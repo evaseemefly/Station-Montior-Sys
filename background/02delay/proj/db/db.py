@@ -17,7 +17,11 @@ from conf.settings import DATABASES
 class DbFactory:
     """
         数据库工厂
+        24-08-28 目前使用的 数据库工厂类
     """
+
+    default_config: DBConfig = DBConfig()
+    """默认配置项"""
 
     def __init__(self, db_mapping: str = 'default', engine_str: str = None, host: str = None, port: str = None,
                  db_name: str = None,
@@ -34,6 +38,8 @@ class DbFactory:
         :param pwd:
         """
         db_options = DATABASES.get(db_mapping)
+        config = self.default_config
+        '''当前加载的默认配置'''
         self.engine_str = engine_str if engine_str else db_options.get('ENGINE')
         self.host = host if host else db_options.get('HOST')
         self.port = port if port else db_options.get('POST')
@@ -43,13 +49,20 @@ class DbFactory:
         # TypeError: Invalid argument(s) 'encoding' sent to create_engine(), using configuration MySQLDialect_mysqldb/QueuePool/Engine.  Please check that the keyword arguments are appropriate for this combination of components.
         self.engine = create_engine(
             f"mysql+{self.engine_str}://{self.user}:{self.password}@{self.host}:{self.port}/{self.db_name}",
-            pool_pre_ping=True, future=True, echo=False)
+            pool_pre_ping=True, future=True, echo=False, pool_size=config.pool_size,
+            max_overflow=config.max_overflow,
+            pool_recycle=config.pool_recycle, )
         # TODO:[-] 23-03-03 通过 scoped_session 来提供现成安全的全局session
         # 参考: https://juejin.cn/post/6844904164141580302
         self._session_def = scoped_session(sessionmaker(bind=self.engine))
+        """cls中的默认 session """
 
     @property
     def Session(self) -> scoped_session:
+        """
+            获取 cls._session_def -> session
+        @return:
+        """
         if self._session_def is None:
             self._session_def = scoped_session(sessionmaker(bind=self.engine))
         return self._session_def()
@@ -58,6 +71,7 @@ class DbFactory:
 class DBFactory:
     """
         + 23-03-09 数据库工厂类
+        @exceed
     """
     session: Session = None
     default_config: DBConfig = DBConfig()
@@ -120,7 +134,7 @@ class DBFactory:
 @contextmanager
 def session_yield_scope():
     """
-        TODO:[-] 24-08-26 基于事物的Session会话管理
+        [-] 24-08-26 基于事物的Session会话管理
     """
 
     # session = DBFactory().session
