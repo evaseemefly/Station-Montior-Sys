@@ -95,7 +95,7 @@ LIST_STATIONS: List[StationElementMidModel] = [
     # StationElementMidModel('SHS', '0', '三门核电', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07455', '椒江', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('HMZ', '0', '海门Z', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO: 无
-    StationElementMidModel('DCH', '07442', '大陈', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    StationElementMidModel('DCH', '07422', '大陈', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07550' '石塘', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('KMN', '07424', '坎门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07607', '西门岛', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -118,7 +118,7 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('BSH', '08432', '北礵', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('CAO', 'F5114', '城澳', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     # StationElementMidModel('SHS', 'F5102', '东冲', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    StationElementMidModel('BJA', '08443', '北茭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    StationElementMidModel('BJA', '08433', '北茭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('QGY', 'F5104', '青屿', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     # StationElementMidModel('QGY', '0', '长门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('CGM', '08444', '长门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -175,7 +175,8 @@ LIST_STATIONS: List[StationElementMidModel] = [
     # StationElementMidModel('QGY', '0', '泗盛围', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('HPU', '0', '黄埔', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     # StationElementMidModel('NSA', '0', '南沙', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
-    # StationElementMidModel('QGY', '09736', '广州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),    # TODO
+    StationElementMidModel('QGY', '09736', '广州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    # TODO:[-] 24-08-30 南海新加入的站点
     # StationElementMidModel('HGM', '0', '横门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     StationElementMidModel('ZHU', '09734', '珠海', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('MGE', '0', '妈阁', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
@@ -187,7 +188,9 @@ LIST_STATIONS: List[StationElementMidModel] = [
     # StationElementMidModel('QGY', '0', '黄金', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '09873', '高栏', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '0', '黄冲', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    StationElementMidModel('TSH', '09737', '台山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    StationElementMidModel('TSH', '09737', '广东台山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    # TODO:[-] 24-08-30 更新了中文名
+
     # StationElementMidModel('TSH', '0', '烽火角', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('TSH', '0', '北津', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     # StationElementMidModel('BJI', '0', '闸坡', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
@@ -223,10 +226,16 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('SHW', '08522', '莆田', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('DTO', '07450', '温州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
 
+    StationElementMidModel('LGS', '11755', '陵水', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    # TODO:[-] 24-08-30 南海新加入的站点
+
 ]
 '''站点集合常量'''
-
-LIST_STATIONS: List[StationElementMidModel] = [StationElementMidModel('BYQ', '01111', '鲅鱼圈', [ElementTypeEnum.SURGE]), ]
+#
+LIST_STATIONS: List[StationElementMidModel] = [
+    # StationElementMidModel('BJA', '08443', '北茭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    StationElementMidModel('KMN', '07424', '坎门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+]
 
 LIST_FUBS: List[StationElementMidModel] = [
 

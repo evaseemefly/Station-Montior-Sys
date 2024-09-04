@@ -22,9 +22,9 @@ class DBConfig:
     charset = 'utf8mb4'
     table_name_prefix = ''
     echo = False
-    pool_size = 50
-    max_overflow = 70
-    pool_timeout = 20
+    pool_size = 10
+    max_overflow = 20
+    pool_timeout = 30
     pool_recycle = 180
 
     def get_url(self):
