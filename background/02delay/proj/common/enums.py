@@ -75,3 +75,6 @@ class RunTypeEnmum(Enum):
 
     DELATY_FUB_TASK = 105
     """延时任务"""
+
+    DELATY_SLB_TASK = 106
+    """定时处理水利部站点"""

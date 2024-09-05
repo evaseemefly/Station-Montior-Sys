@@ -517,3 +517,20 @@ def delay_fub_task(start_ts: int, end_ts: int):
     scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=30)
     # # 启动调度任务
     scheduler.start()
+
+
+def delay_slb_task(start_ts: int, end_ts: int):
+    """
+        执行定时延时作业:
+            定时下载水利部站点数据
+    :return:
+    """
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动定时任务触发事件:')
+    # 执行定时下载任务
+    scheduler.add_job(timer_download_slb_realdata, 'interval', minutes=30)
+    # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
+    # # 启动调度任务
+    scheduler.start()

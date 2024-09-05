@@ -66,9 +66,6 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('CMG', '05454', '崇明', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHW', '0', '新村沙', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHW', '06414', '佘山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('SHW', '0'       '高桥', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('SHW', '0'       '吴淞', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('HPG', '', '黄浦公园', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),   # TODO:
     StationElementMidModel('LCG', '05453', '芦潮港', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHW', '0', '金山嘴', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHW', '05452', '东大桥', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -76,12 +73,10 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('DJS', '07415', '大戢山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHW', '06416', '小衢山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('SHS', '07417', '嵊山', [ElementTypeEnum.SURGE]),
-    # StationElementMidModel('SHW', '0'       '乍浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('SHW', '0', '澉浦', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
 
     StationElementMidModel('DAI', '07509', '岱山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '0', '长白', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('DHI', '0', '定海', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+
     StationElementMidModel('ZHI', '07447', '镇海', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('SJM', '07448', '沈家门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07452', '六横', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -94,7 +89,7 @@ LIST_STATIONS: List[StationElementMidModel] = [
     # StationElementMidModel('SHS', '07454'   '三门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '0', '三门核电', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07455', '椒江', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('HMZ', '0', '海门Z', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO: 无
+
     StationElementMidModel('DCH', '07422', '大陈', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('SHS', '07550' '石塘', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('KMN', '07424', '坎门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -122,9 +117,7 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('QGY', 'F5104', '青屿', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     # StationElementMidModel('QGY', '0', '长门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('CGM', '08444', '长门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('QGY', '0', '琯头', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('QGY', '0', '白岩潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('QGY', '0', '梅花', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+
     StationElementMidModel('TNT', 'F5105', '潭头', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     StationElementMidModel('PTN', '08440', '平潭', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('FQH', 'F5106', '福清核电', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
@@ -154,7 +147,7 @@ LIST_STATIONS: List[StationElementMidModel] = [
     # part3: 南海
     # StationElementMidModel('QGY', '0', '东溪口', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '0', '汕头', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('HMN', '0', '海门G', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),# TODO: 无
+
     StationElementMidModel('STO', '09735', '汕头S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('HLA', '09866', '惠来', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('LFG', '09867', '陆丰', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -173,18 +166,18 @@ LIST_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('SZJ', '44A4', '深圳机场', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     StationElementMidModel('DMS', '44A7', '大梅沙', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:[*]
     # StationElementMidModel('QGY', '0', '泗盛围', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    # StationElementMidModel('HPU', '0', '黄埔', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
+
     # StationElementMidModel('NSA', '0', '南沙', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     StationElementMidModel('QGY', '09736', '广州', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # TODO:[-] 24-08-30 南海新加入的站点
-    # StationElementMidModel('HGM', '0', '横门', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
+
     StationElementMidModel('ZHU', '09734', '珠海', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('MGE', '0', '妈阁', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     # StationElementMidModel('QGY', '0', '青洲塘', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '0', '外港', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('DLS', '0', '灯笼山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO:无
     # StationElementMidModel('QGY', '09732', '大万山', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),   # TODO
-    # StationElementMidModel('SZA', '0', '三灶', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # TODO
+
     # StationElementMidModel('QGY', '0', '黄金', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '09873', '高栏', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     # StationElementMidModel('QGY', '0', '黄冲', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
@@ -275,10 +268,28 @@ LIST_FUBS: List[StationElementMidModel] = [
 '''浮标站点集合'''
 
 LIST_SLB_STATIONS: List[StationElementMidModel] = [
-    StationElementMidModel('WZS', '0', '温州S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    StationElementMidModel('WZS', '70503400', '温州S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
     StationElementMidModel('RAS', '70600800', '瑞安S', [ElementTypeEnum.SURGE]),
     StationElementMidModel('AJS', '70610600', '鳌江S', [ElementTypeEnum.SURGE]),
     StationElementMidModel('WZS', '70503400', '温州S', [ElementTypeEnum.SURGE]),
-    StationElementMidModel('SCS', '0', '沙埕S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
-    StationElementMidModel('ZJS', '0', '湛江S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]), ]
+    StationElementMidModel('SCS', '71500100', '沙埕S', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('ZJS', '0', '湛江S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),
+    # 24-09-05 核对后的站点
+    StationElementMidModel('HPU', '81204900', '黄埔', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('HGM', '81302340', '横门', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('SZA', '81302020', '三灶', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('NAD', '81705300', '南渡', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('BYT', '71201700', '白岩潭', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('MHA', '71202000', '梅花', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('GTO', '71201900', '琯头', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('HMZ', '70402000', '海门Z', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('HMN', '81601550', '海门G', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('DHI', '70700600', '定海', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('GPU', '70703600', '澉浦', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('ZPU', '70103640', '乍浦', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('GQA', '62701710', '高桥', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('WSG', '63401750', '吴淞', [ElementTypeEnum.SURGE]),
+    StationElementMidModel('HPG', '63401500', '黄浦公园', [ElementTypeEnum.SURGE]),
+
+]
 '''水利部潮位站'''

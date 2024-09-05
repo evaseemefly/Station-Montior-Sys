@@ -9,7 +9,8 @@ import arrow
 from common.enums import RunTypeEnmum
 from conf.settings import LOG_DIR, LOG_FILE
 from tasks.cases import delay_task, timer_download_station_realdata, timer_download_fub_realdata, \
-    task_downloads_fub_byrange, task_downloads_station_byrange, task_downloads_slb_byrange, delay_fub_task
+    task_downloads_fub_byrange, task_downloads_station_byrange, task_downloads_slb_byrange, delay_fub_task, \
+    delay_slb_task
 
 
 def init_logging():
@@ -78,6 +79,7 @@ def main(run_type: RunTypeEnmum = RunTypeEnmum.DELATY_TASK, start: str = '197001
         RunTypeEnmum.DATAENTRY_STATION_RANGE: task_downloads_station_byrange,
         RunTypeEnmum.DATAENTRY_SLB_RANGE: task_downloads_slb_byrange,
         RunTypeEnmum.DATAENTRY_FUB_RANGE: task_downloads_fub_byrange,
+        RunTypeEnmum.DELATY_SLB_TASK: delay_slb_task,
     }
     task_func = switch_task.get(run_type)
     # task_downloads_fub_byrange(start_dt.int_timestamp, end_dt.int_timestamp, 1)
