@@ -223,7 +223,7 @@ class SurgeReader(IReader):
         d85: int = 0
         """站点code"""
         if region_group == RegionGroupEnum.SHUILI:
-            d85: int = d85_dicts.get(code)
+            d85: int = d85_dicts.get(code, 0)
 
         # step-1: 判断指定文件是否存在
         if pathlib.Path(full_path).exists():

@@ -28,7 +28,7 @@ DOWNLOAD_OPTIONS = {
     # 挂载映射盘路径
     # 'remote_root_path': r'/data/remote',
     'remote_root_path': r'X:',
-    'remote_station_root_path': r'/home/nmefc/data_test/数据',
+    'remote_station_root_path': r'/home/nmefc/share/test/ObsData/STATION',
     'remote_fub_root_path': r'',
     'remote_slb_root_path': r'/home/nmefc/share/test/ObsData/STATION',
     # 线上环境

@@ -1,11 +1,13 @@
 from typing import List, Optional, Any
 from datetime import datetime
 import arrow
+import pandas as pd
 from sqlalchemy import select, update, func, and_, text, TextClause, union_all, MetaData, Table, Column, String, \
     Integer, Float, Date
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql import func
 
+from common.default import NAN_VAL
 from db.db import session_scope
 from mid_models.stations import DistStationSurgeListMidModel
 from models.station import SurgePerclockDataModel, SurgePerclockExtremumDataModel, get_table
@@ -13,6 +15,7 @@ from schema.region import RegionSchema
 from schema.station_surge import SurgeRealDataSchema
 
 from dao.base import BaseDao
+from util.common import get_diff_timestamp_list
 
 
 class StationSurgeDao(BaseDao):
@@ -200,6 +203,9 @@ class StationSurgeDao(BaseDao):
 
         tab_name: str = SurgePerclockDataModel.get_split_tab_name(start_ts)
 
+        # TODO:[-] 24-09-10 加入基于起止时间的时间戳集合范围标准化（对于缺省值进行填充） 时间戳单位(s)
+        standard_ts_list: List[int] = get_diff_timestamp_list(start_ts, end_ts)
+        '''标准化后的时间戳集合'''
         with session_scope() as session:
             sql_str: text = text(f"""
                 SELECT station_code,
@@ -376,6 +382,7 @@ class StationSurgeDao(BaseDao):
                 #     (SurgePerclockDataModel.issue_ts <= end_ts)
                 # )
             dist_station_surge_list: List[DistStationSurgeListMidModel] = []
+            # TODO:[*] 24-09-10 此处应加入对于时间的质控，有可能中间有空缺的数值
             for temp in res:
                 temp_code: str = temp.station_code
                 temp_surge_str_list: List[str] = temp.surge_list.split(',')
@@ -389,9 +396,17 @@ class StationSurgeDao(BaseDao):
                 for temp_ts_str in temp_ts_str_list:
                     if temp_ts_str != '':
                         temp_ts_list.append(int(temp_ts_str))
+                # TODO:[*] 24-09-10 此处通过 dataframe进行缺省ts的填充
+                res_df: pd.DataFrame = pd.DataFrame({"ts": temp_ts_list, 'surge': temp_surge_list})
+                res_df.set_index('ts', inplace=True)
+                standard_res_df: pd.DataFrame = res_df.reindex(standard_ts_list, fill_value=NAN_VAL)
+                standard_surge_list: List[float] = standard_res_df['surge'].tolist()
+                '''标准化后的潮位集合'''
+                # standard_ts_list: List[int] = standard_res_df['ts'].tolist()
+
                 temp_tide_middelmodel: DistStationSurgeListMidModel = DistStationSurgeListMidModel(code=temp_code,
-                                                                                                   surge_list=temp_surge_list,
-                                                                                                   ts_list=temp_ts_list)
+                                                                                                   surge_list=standard_surge_list,
+                                                                                                   ts_list=standard_ts_list)
                 dist_station_surge_list.append(temp_tide_middelmodel)
             # session.close()
         return dist_station_surge_list

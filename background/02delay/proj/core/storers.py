@@ -254,7 +254,7 @@ class PerclockWindStore(IStore):
             temp_standard_ws = temp_ws
             """当前实况的标准化后数值(若为缺省值则统一赋值为标准缺省值"""
             temp_wd = val['wd']
-            temp_standard_wd = temp_ws
+            temp_standard_wd = temp_wd
             if temp_ws in DEFAULT_VAL_LIST:
                 temp_standard_ws = DEFAULT_WINDSPEED
             if temp_wd in DEFAULT_VAL_LIST:
