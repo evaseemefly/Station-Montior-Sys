@@ -166,19 +166,20 @@ class FubDao(BaseDao):
                         res_df = pd.DataFrame({'ts': temp_ts_list})
                     res_df[name_element] = temp_val_list
                     pass
-                # 循环结束后对dataframe设置对应索引
-                res_df.set_index('ts', inplace=True)
-                res_aligend_df = res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
-                """填充了缺省值后的标准化后的 dataframe """
-                # 循环元素数组获取标准化后的对应元素的集合
-                for temp_element in elements:
-                    temp_element_vals = res_aligend_df[temp_element.value].tolist()
-                    temp_fub_realdata: FubListMidModel = FubListMidModel(temp_code, temp_element.value,
-                                                                         list_ts_standard,
-                                                                         temp_element_vals)
-                    fub_realdata_list.append(temp_fub_realdata)
-                fubs_obserivation_list.append(
-                    DistFubListMidModel(temp_code, ObservationTypeEnum.FUB, fub_realdata_list))
+                if res_df is not None:
+                    # 循环结束后对dataframe设置对应索引
+                    res_df.set_index('ts', inplace=True)
+                    res_aligend_df = res_df.reindex(list_ts_standard, fill_value=NAN_VAL)
+                    """填充了缺省值后的标准化后的 dataframe """
+                    # 循环元素数组获取标准化后的对应元素的集合
+                    for temp_element in elements:
+                        temp_element_vals = res_aligend_df[temp_element.value].tolist()
+                        temp_fub_realdata: FubListMidModel = FubListMidModel(temp_code, temp_element.value,
+                                                                             list_ts_standard,
+                                                                             temp_element_vals)
+                        fub_realdata_list.append(temp_fub_realdata)
+                    fubs_obserivation_list.append(
+                        DistFubListMidModel(temp_code, ObservationTypeEnum.FUB, fub_realdata_list))
         return fubs_obserivation_list
 
     def get_all_fubs_codes(self) -> List[str]:
