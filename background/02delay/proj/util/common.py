@@ -27,6 +27,18 @@ def get_utc_month(ts: int) -> str:
     return month_str
 
 
+def get_localtime_year_bydt(dt_utc: arrow.Arrow) -> str:
+    """
+        TODO:[-] 24-09-15 统一修改为在外侧处理
+        获取当前传入的 utc dt 对应的本地时 yyyy
+    @param dt_utc:
+    @return:
+    """
+    format_str: str = 'YYYY'
+    yyyy = dt_utc.shift(hours=8).format(format_str)
+    return yyyy
+
+
 def get_localtime_year(ts: int) -> str:
     """
             本日 00->23 H
@@ -36,6 +48,18 @@ def get_localtime_year(ts: int) -> str:
     dt_arrow: arrow.Arrow = arrow.get(ts)
     yyyy = dt_arrow.shift(days=1).format(format_str)
     return yyyy
+
+
+def get_localtime_month_bydt(dt_utc: arrow.Arrow) -> str:
+    """
+        TODO:[-] 24-09-15 统一修改为在外侧处理
+        获取当前传入的 utc dt 对应的本地时 mm
+    @param dt_utc:
+    @return:
+    """
+    format_str: str = 'MM'
+    mm = dt_utc.shift(hours=8).format(format_str)
+    return mm
 
 
 def get_localtime_month(ts: int) -> str:
@@ -50,6 +74,18 @@ def get_localtime_month(ts: int) -> str:
     return mm
 
 
+def get_localtime_day_bydt(dt_utc: arrow.Arrow) -> str:
+    """
+        TODO:[-] 24-09-15 统一修改为在外侧处理
+        获取当前传入的 utc dt 对应的本地时 mm
+    @param dt_utc:
+    @return:
+    """
+    format_str: str = 'DD'
+    dd = dt_utc.shift(hours=8).format(format_str)
+    return dd
+
+
 def get_localtime_day(ts: int) -> str:
     """
             本日 00->23 H
@@ -58,6 +94,16 @@ def get_localtime_day(ts: int) -> str:
     format_str: str = 'DD'
     dt_arrow: arrow.Arrow = arrow.get(ts)
     # 0-15
+    # TODO:[*] 24-09-15 此处的意义是？
+    dd = dt_arrow.shift(days=1).format(format_str)
+    return dd
+
+
+def get_tomorrow_local_day(ts: int) -> str:
+    format_str: str = 'DD'
+    dt_arrow: arrow.Arrow = arrow.get(ts)
+    # 0-15
+    # TODO:[*] 24-09-15 此处的意义是？
     dd = dt_arrow.shift(days=1).format(format_str)
     return dd
 
@@ -86,16 +132,27 @@ def get_store_relative_exclude_day(ts: int) -> str:
     return str(path)
 
 
-def get_store_relative_path(ts: int) -> str:
+def get_store_relative_path(ts: int, element_type: ElementTypeEnum = ElementTypeEnum.SURGE) -> str:
     """
         获取存储的相对路径 yyyy/mm/dd
     :param ts:
     :return:
     """
     # TODO:[*] 24-02-26 注意此处修改为根据本地时间获取存储路径
-    year: str = get_localtime_year(ts)
-    month: str = get_localtime_month(ts)
-    day: str = get_localtime_day(ts)
+    # TODO:[-] 24-09-15 修改存储路径
+    # year: str = get_localtime_year(ts)
+    # month: str = get_localtime_month(ts)
+    # day: str = get_localtime_day(ts)
+
+    dt_utc: arrow.Arrow = arrow.get(ts)
+    dt_local: arrow.Arrow = dt_utc.shift(hours=8)
+    if element_type == ElementTypeEnum.WIND:
+        # TODO:[-] 24-09-15 对当前时间 + 4h 由于21时起为下一日
+        dt_utc = dt_utc.shift(hours=3)
+
+    year: str = get_localtime_year_bydt(dt_utc)
+    month: str = get_localtime_month_bydt(dt_utc)
+    day: str = get_localtime_day_bydt(dt_utc)
     path = pathlib.Path(year) / month / day
     return str(path)
 
@@ -182,7 +239,7 @@ def get_standard_datestamp(ts: int, element_type: ElementTypeEnum = ElementTypeE
     return date_str
 
 
-def get_calendarday_filestamp(ts: int) -> str:
+def get_calendarday_filestamp(ts: int, element_type: ElementTypeEnum = ElementTypeEnum.SURGE) -> str:
     """
         根据传入时间获取对应的自然日的 日期 stamp (mmdd)
         对应要素:潮位 00-23(local)
@@ -195,7 +252,17 @@ def get_calendarday_filestamp(ts: int) -> str:
     format_str: str = 'MMDD'
     # 传入的时间对应的 dt
     dt_arrow: arrow.Arrow = arrow.get(ts)
-    mmdd = dt_arrow.shift(days=1).format(format_str)
+    # TODO:[-] 24-09-16 此处修改为本地时
+    # mmdd = dt_arrow.shift(days=1).format(format_str)
+    if element_type == ElementTypeEnum.SURGE:
+        mmdd = dt_arrow.shift(hours=8).format(format_str)
+    elif element_type == ElementTypeEnum.WIND:
+        # TODO:[-] 24-09-15 风要素每日21时起是在明日的文件夹中
+        dt_local: arrow.Arrow = dt_arrow.shift(hours=8)
+        if int(dt_local.format('HH')) >= 21:
+            mmdd = dt_local.shift(days=1).format(format_str)
+        else:
+            mmdd = dt_local.format(format_str)
     return mmdd
 
 

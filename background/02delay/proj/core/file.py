@@ -13,6 +13,7 @@ from common.enums import ElementTypeEnum
 class IFile(ABC):
     """
         文件接口
+        已废弃
     """
 
     def __init__(self, ftp_client: FtpClient, local_root_path: str, element_type: ElementTypeEnum,

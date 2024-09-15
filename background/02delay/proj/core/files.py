@@ -145,7 +145,7 @@ class IStationFile(IFile):
             实际路径: /home/nmefc/share/test/ObsData/汕尾/perclock/2024/02
         @return: '/test/ObsData/SHW/2024/02/20'
         """
-        relative_path: str = get_store_relative_path(self.ts)
+        relative_path: str = get_store_relative_path(self.ts, self.element_type)
         """存储的相对路径(yyyy/mm/dd)"""
         path = pathlib.Path(self.remote_root_path) / self.station_name / 'perclock' / relative_path
         # TODO:[-] 24-03-27 此处若运行在win下需要手动将其转换为 linux 路径格式
@@ -153,7 +153,7 @@ class IStationFile(IFile):
         return str(path)
 
     def get_local_path(self) -> str:
-        relative_path: str = get_store_relative_path(self.ts)
+        relative_path: str = get_store_relative_path(self.ts, self.element_type)
         """存储的相对路径(yyyy/mm/dd)"""
         path = pathlib.Path(self.local_root_path) / self.station_name / relative_path
         return str(path)
@@ -165,7 +165,7 @@ class IStationFile(IFile):
             实际路径: /home/nmefc/share/test/ObsData/汕尾/perclock/2024/02
         @return: eg: /test/ObsData/SHW/2024/02/20
         """
-        relative_path: str = get_store_relative_path(self.ts)
+        relative_path: str = get_store_relative_path(self.ts, self.element_type)
         # TODO:[-] 24-02-26 注意实际的路径(包含:perclock)
         path = pathlib.Path(self.station_name) / 'perclock' / relative_path
         return str(path)
@@ -250,7 +250,8 @@ class SurgeFile(IStationFile):
                 :param ts:
                 :return:
                 """
-        mmdd = get_calendarday_filestamp(self.ts)
+        # TODO:[-] 24-09-15 注意此处存在bug 潮位数据是当日创建当日的文件
+        mmdd = get_calendarday_filestamp(self.ts, ElementTypeEnum.SURGE)
         file_name: str = f'WL{mmdd}_DAT.{self.station_num}'
         """WL0115_DAT.08442"""
         return file_name
@@ -265,7 +266,7 @@ class WindFile(IStationFile):
                 :param ts:
                 :return:
                 """
-        mmdd = get_calendarday_filestamp(self.ts)
+        mmdd = get_calendarday_filestamp(self.ts, ElementTypeEnum.WIND)
         file_name: str = f'WS{mmdd}_DAT.{self.station_num}'
         """WS0115_DAT.08442"""
         return file_name
