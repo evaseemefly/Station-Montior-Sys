@@ -233,7 +233,7 @@ class FubFile(IStationFile):
             注意文件名为本地时间
         @return: 202403010000MF02004.dat
         """
-        date_str: str = get_local_fulltime_stamp(self.ts)
+        date_str: str = get_local_fulltime_stamp(self.ts, True)
         fub_stamp: str = 'MF'
         # eg: 202403010000MF02004.dat
         file_name: str = f'{date_str}{fub_stamp}{self.station_code}.dat.xml'

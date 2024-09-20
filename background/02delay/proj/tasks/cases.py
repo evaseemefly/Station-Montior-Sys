@@ -86,20 +86,22 @@ class StationRealdataDownloadCase(ICase):
         list_station = LIST_STATIONS
         ftp = self.ftp_client
         ts = kwargs.get('ts')
-        # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)
-        stand_start_ts: int = get_station_start_ts(ts)
+
         """世界时"""
         local_root_path: str = kwargs.get('local_root_path')
         remote_root_path: str = kwargs.get('remote_root_path')
+        current_dt_str: str = arrow.get(ts).format('YYYY-MM-DD HH:mm:ssZ')
 
         # step2:根据集合遍历执行批量 下载 -> 读取 -> to db -> 删除操作
         for val_station in list_station:
             # logger.info(f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}')
             for val_element in val_station.elements:
                 logger.info(
-                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{stand_start_ts}|要素:{val_element.value}')
+                    f'[-]处理:{val_station.station_name}-{val_station.station_code}站点|ts:{current_dt_str}|要素:{val_element.value}')
                 # TODO"[*] 24-07-29 在此处加入异常处理
                 try:
+                    # TODO:[-] 24-02-29 修改为根据传入时间获取对应的统一时间戳(起止时间)
+                    stand_start_ts: int = get_station_start_ts(ts, val_element)
                     # step2-1:根据工厂方法获取当前要素对应的文件
                     cls = factory_get_station_file(val_element)
                     """ 文件类"""
@@ -321,6 +323,9 @@ def timer_download_station_realdata():
     # target_dt = arrow.Arrow(2024, 2, 20, 0, 0)
     # now_ts: int = ts
     now_ts: int = arrow.utcnow().int_timestamp
+    # TODO:[*] 24-09-19 测试需要注释
+    # target_dt = arrow.Arrow(2024, 9, 19, 13, 12)
+    # now_ts: int = target_dt.int_timestamp
     # local_root_path: str = '/Users/evaseemefly/03data/02station'
     # TODO:[-] 24-03-27 采用 docker 容器内绝对路径为 /data/remote
     # local_root_path: str = r'D:\05data\05station_data'
@@ -496,7 +501,7 @@ def delay_task(start_ts: int, end_ts: int):
     # 十分钟/次 的定时下载站点任务
     # scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
     # TODO:[-] 24-07-29 执行定时下载任务
-    scheduler.add_job(timer_download_station_realdata, 'interval', minutes=30)
+    scheduler.add_job(timer_download_station_realdata, 'interval', minutes=10)
     # TODO:[*] 24-08-19
     # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
     # # 启动调度任务
@@ -514,7 +519,7 @@ def delay_fub_task(start_ts: int, end_ts: int):
     # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
     logger.info('[-]启动定时任务触发事件:')
     # TODO:[*] 24-08-19
-    scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=30)
+    scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=1)
     # # 启动调度任务
     scheduler.start()
 
@@ -530,7 +535,7 @@ def delay_slb_task(start_ts: int, end_ts: int):
     # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
     logger.info('[-]启动定时任务触发事件:')
     # 执行定时下载任务
-    scheduler.add_job(timer_download_slb_realdata, 'interval', minutes=30)
+    scheduler.add_job(timer_download_slb_realdata, 'interval', minutes=15)
     # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
     # # 启动调度任务
     scheduler.start()

@@ -226,8 +226,8 @@ LIST_STATIONS: List[StationElementMidModel] = [
 ]
 '''站点集合常量'''
 #
-# LIST_STATIONS: List[StationElementMidModel] = [
-#     StationElementMidModel('HLD', '01120', '葫芦岛', [ElementTypeEnum.WIND]), ]
+LIST_STATIONS: List[StationElementMidModel] = [
+    StationElementMidModel('LCG', '05453', '芦潮港', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]), ]
 
 LIST_FUBS: List[StationElementMidModel] = [
 
@@ -265,6 +265,10 @@ LIST_FUBS: List[StationElementMidModel] = [
     StationElementMidModel('18001', '18001', 'MF18001', [ElementTypeEnum.FUB]),
 ]
 '''浮标站点集合'''
+
+LIST_FUBS: List[StationElementMidModel] = [
+
+    StationElementMidModel('01001', '01001', 'MF01001', [ElementTypeEnum.FUB]), ]
 
 LIST_SLB_STATIONS: List[StationElementMidModel] = [
     StationElementMidModel('WZS', '70503400', '温州S', [ElementTypeEnum.SURGE, ElementTypeEnum.WIND]),  # 有错误
