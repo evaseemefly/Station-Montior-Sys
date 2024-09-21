@@ -384,7 +384,43 @@ def timer_download_fub_realdata():
     logger.info(f"触发timer_download_FUB_realdata|ts:{stand_ts}|dt:{stand_dt_str}")
 
     case = FubRealdataDownloadCase()
-    case.todo(ts=now_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
+    case.todo(ts=stand_ts, local_root_path=local_root_path, remote_root_path=remote_root_path)
+
+
+def timer_download_fub_realdata_daily():
+    '''
+        每日00时补录前一日 fub 全部站点的实况
+    @return:
+    '''
+    now_local_dt: arrow.Arrow = arrow.now()
+    yesterday = now_local_dt.shift(days=-1)
+    yesterday_start_ts: int = yesterday.floor('day').int_timestamp
+    yesterday_end_ts: int = yesterday.floor('day').shift(days=1).int_timestamp
+    task_downloads_fub_byrange(yesterday_start_ts, yesterday_end_ts)
+
+
+def timer_download_station_realdata_daily():
+    '''
+        每日00时补录前一日 station 全部站点的实况
+    @return:
+    '''
+    now_local_dt: arrow.Arrow = arrow.now()
+    yesterday = now_local_dt.shift(days=-1)
+    yesterday_start_ts: int = yesterday.floor('day').int_timestamp
+    yesterday_end_ts: int = yesterday.floor('day').shift(days=1).int_timestamp
+    task_downloads_station_byrange(yesterday_start_ts, yesterday_end_ts)
+
+
+def timer_download_slb_realdata_daily():
+    '''
+        每日00时补录前一日 slb 全部站点的实况
+    @return:
+    '''
+    now_local_dt: arrow.Arrow = arrow.now()
+    yesterday = now_local_dt.shift(days=-1)
+    yesterday_start_ts: int = yesterday.floor('day').int_timestamp
+    yesterday_end_ts: int = yesterday.floor('day').shift(days=1).int_timestamp
+    task_downloads_slb_byrange(yesterday_start_ts, yesterday_end_ts)
 
 
 def task_downloads_fub_byrange(start_ts: int, end_ts: int, split_hours=1):
@@ -537,5 +573,38 @@ def delay_slb_task(start_ts: int, end_ts: int):
     # 执行定时下载任务
     scheduler.add_job(timer_download_slb_realdata, 'interval', minutes=15)
     # scheduler.add_job(timer_download_fub_realdata, 'interval', minutes=10)
+    # # 启动调度任务
+    scheduler.start()
+
+
+def delay_slb_daily_task(start_ts: int, end_ts: int):
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动slb每日定时补录任务:')
+    # 执行定时下载任务
+    scheduler.add_job(timer_download_slb_realdata_daily, 'cron', hour=16, minute=30)
+    # # 启动调度任务
+    scheduler.start()
+
+
+def delay_station_daily_task(start_ts: int, end_ts: int):
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动slb每日定时补录任务:')
+    # 执行定时下载任务
+    scheduler.add_job(timer_download_slb_realdata_daily, 'cron', hour=16, minute=30)
+    # # 启动调度任务
+    scheduler.start()
+
+
+def delay_fub_daily_task(start_ts: int, end_ts: int):
+    scheduler = BackgroundScheduler(timezone='UTC')
+    # 添加调度任务
+    # 调度方法为 timedTask，触发器选择 interval(间隔性)，间隔时长为 2 秒
+    logger.info('[-]启动slb每日定时补录任务:')
+    # 执行定时下载任务
+    scheduler.add_job(timer_download_fub_realdata_daily, 'cron', hour=16, minute=30)
     # # 启动调度任务
     scheduler.start()

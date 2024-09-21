@@ -78,3 +78,12 @@ class RunTypeEnmum(Enum):
 
     DELATY_SLB_TASK = 106
     """定时处理水利部站点"""
+
+    DELATY_STATIN_DAILY_TASK = 111
+    """每日补录海洋站定时任务"""
+
+    DELATY_FUB_DAILY_TASK = 115
+    """每日补录FUB定时任务"""
+
+    DELATY_SLB_DAILY_TASK = 116
+    """每日补录SLB定时任务"""
